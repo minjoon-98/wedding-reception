@@ -20,12 +20,18 @@ function formatAmountShort(num) {
 export default function App() {
   const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
+  const [side, setSide] = useState('미분류')
+  const [relation, setRelation] = useState('')
+  const [memo, setMemo] = useState('')
+  const [showExtra, setShowExtra] = useState(false)
   const [recentGuests, setRecentGuests] = useState([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [todayTotal, setTodayTotal] = useState(0)
   const [todayCount, setTodayCount] = useState(0)
   const nameInputRef = useRef(null)
+
+  const SIDE_OPTIONS = ['미분류', '신랑측', '신부측', '신랑 부모님', '신부 부모님', '기타']
 
   useEffect(() => {
     fetchRecent()
@@ -76,9 +82,9 @@ export default function App() {
       .insert([{
         name: name.trim(),
         amount: parseInt(amount),
-        side: '미분류',
-        relation: '',
-        memo: '',
+        side: side,
+        relation: relation.trim(),
+        memo: memo.trim(),
         recorded_by: '',
       }])
 
@@ -87,6 +93,10 @@ export default function App() {
     if (!error) {
       setName('')
       setAmount('')
+      setSide('미분류')
+      setRelation('')
+      setMemo('')
+      setShowExtra(false)
       setShowSuccess(true)
       setTimeout(() => setShowSuccess(false), 1500)
       nameInputRef.current?.focus()
@@ -189,6 +199,76 @@ export default function App() {
             </div>
           </div>
 
+          {/* 추가 정보 (선택) */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowExtra(!showExtra)}
+              className="flex items-center gap-1.5 text-sm text-sage-400 hover:text-sage-600 transition-colors"
+            >
+              <span className={`inline-block transition-transform duration-200 ${showExtra ? 'rotate-90' : ''}`}>
+                ▸
+              </span>
+              추가 정보 (선택)
+              {(side !== '미분류' || relation || memo) && (
+                <span className="ml-1 w-1.5 h-1.5 rounded-full bg-sage-400" />
+              )}
+            </button>
+
+            {showExtra && (
+              <div className="mt-3 space-y-3 animate-slide-up">
+                {/* 구분 */}
+                <div>
+                  <label className="block text-xs font-medium text-sage-500 mb-1">구분</label>
+                  <div className="flex flex-wrap gap-2">
+                    {SIDE_OPTIONS.map((opt) => (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => setSide(opt)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-150
+                          ${side === opt
+                            ? 'bg-sage-600 text-white'
+                            : 'bg-sage-50 text-sage-500 hover:bg-sage-100'
+                          }`}
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 관계 */}
+                <div>
+                  <label className="block text-xs font-medium text-sage-500 mb-1">관계</label>
+                  <input
+                    type="text"
+                    value={relation}
+                    onChange={(e) => setRelation(e.target.value)}
+                    placeholder="예: 대학동기, 직장동료, 고모부"
+                    className="w-full px-4 py-2.5 rounded-xl border-2 border-sage-100 bg-white text-sm
+                               focus:border-sage-400 focus:outline-none transition-colors
+                               placeholder:text-sage-200"
+                  />
+                </div>
+
+                {/* 메모 */}
+                <div>
+                  <label className="block text-xs font-medium text-sage-500 mb-1">메모</label>
+                  <input
+                    type="text"
+                    value={memo}
+                    onChange={(e) => setMemo(e.target.value)}
+                    placeholder="예: 안경 쓴 분, 파란 넥타이"
+                    className="w-full px-4 py-2.5 rounded-xl border-2 border-sage-100 bg-white text-sm
+                               focus:border-sage-400 focus:outline-none transition-colors
+                               placeholder:text-sage-200"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* 접수 버튼 */}
           <button
             type="submit"
@@ -224,12 +304,20 @@ export default function App() {
                       {guest.name[0]}
                     </div>
                     <div>
-                      <p className="font-medium text-sage-700">{guest.name}</p>
+                      <p className="font-medium text-sage-700">
+                        {guest.name}
+                        {guest.side && guest.side !== '미분류' && (
+                          <span className="ml-1.5 text-xs font-normal text-sage-400">{guest.side}</span>
+                        )}
+                      </p>
                       <p className="text-xs text-sage-400">
                         {new Date(guest.created_at).toLocaleTimeString('ko-KR', {
                           hour: '2-digit',
                           minute: '2-digit',
                         })}
+                        {guest.memo && (
+                          <span className="ml-1.5 text-sage-300">· {guest.memo}</span>
+                        )}
                       </p>
                     </div>
                   </div>
