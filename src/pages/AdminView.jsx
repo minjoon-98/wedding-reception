@@ -9,6 +9,13 @@ function formatAmount(num) {
   return num.toLocaleString('ko-KR')
 }
 
+function getSideBadgeClasses(side) {
+  if (side === '신랑측' || side === '신랑 부모님') return 'bg-groom-100 text-groom-600'
+  if (side === '신부측' || side === '신부 부모님') return 'bg-bride-100 text-bride-600'
+  if (side === '미분류') return 'bg-gold-50 text-gold-600 border border-gold-300'
+  return 'bg-gold-100 text-gold-700'
+}
+
 export default function AdminView() {
   const [guests, setGuests] = useState([])
   const [search, setSearch] = useState('')
@@ -44,11 +51,9 @@ export default function AdminView() {
     setLoading(false)
   }
 
-  // 필터 & 검색 & 정렬
   const filteredGuests = useMemo(() => {
     let result = [...guests]
 
-    // 검색
     if (search.trim()) {
       const q = search.trim().toLowerCase()
       result = result.filter(g =>
@@ -58,12 +63,10 @@ export default function AdminView() {
       )
     }
 
-    // 필터
     if (filterSide !== '전체') {
       result = result.filter(g => g.side === filterSide)
     }
 
-    // 정렬
     result.sort((a, b) => {
       let valA = a[sortBy]
       let valB = b[sortBy]
@@ -83,7 +86,6 @@ export default function AdminView() {
     return result
   }, [guests, search, filterSide, sortBy, sortDir])
 
-  // 통계
   const stats = useMemo(() => {
     const total = guests.reduce((sum, g) => sum + (g.amount || 0), 0)
     const bySide = {}
@@ -96,7 +98,6 @@ export default function AdminView() {
     return { total, count: guests.length, bySide }
   }, [guests])
 
-  // 인라인 수정
   function startEdit(guest) {
     setEditingId(guest.id)
     setEditForm({
@@ -136,7 +137,6 @@ export default function AdminView() {
     await supabase.from('guests').delete().eq('id', id)
   }
 
-  // CSV 다운로드
   function downloadCSV() {
     const headers = ['이름', '금액', '구분', '관계', '메모', '접수시간']
     const rows = filteredGuests.map(g => [
@@ -159,44 +159,47 @@ export default function AdminView() {
     URL.revokeObjectURL(url)
   }
 
-  // 일괄 분류
-  async function bulkClassify(side) {
+  async function bulkClassify(targetSide) {
     const unclassified = filteredGuests.filter(g => g.side === '미분류')
     if (unclassified.length === 0) return
-    if (!window.confirm(`필터된 미분류 ${unclassified.length}명을 "${side}"(으)로 변경하시겠습니까?`)) return
+    if (!window.confirm(`필터된 미분류 ${unclassified.length}명을 "${targetSide}"(으)로 변경하시겠습니까?`)) return
 
     for (const g of unclassified) {
-      await supabase.from('guests').update({ side }).eq('id', g.id)
+      await supabase.from('guests').update({ side: targetSide }).eq('id', g.id)
     }
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-ivory flex items-center justify-center">
-        <p className="text-sage-400">불러오는 중...</p>
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-gold-400 text-sm">불러오는 중...</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-ivory">
+    <div className="min-h-screen pb-10">
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-ivory/80 backdrop-blur-md border-b border-sage-100">
+      <header className="sticky top-0 z-10 bg-ivory/90 backdrop-blur-md border-b border-gold-200">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <div>
-            <h1 className="font-display text-lg font-bold text-sage-700">관리자</h1>
-            <p className="text-xs text-sage-400 mt-0.5">축의금 접수 관리</p>
+            <p className="text-[10px] tracking-[4px] text-gold-400 uppercase">Admin</p>
+            <h1 className="font-display text-lg font-bold text-gold-800">축의금 관리</h1>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={downloadCSV}
-              className="text-xs px-3 py-1.5 rounded-full bg-sage-600 text-white hover:bg-sage-700 transition-colors"
+              className="text-[12px] px-4 py-2 rounded-full font-semibold
+                         bg-gradient-to-br from-gold-600 to-[#A67C1E] text-white
+                         hover:from-[#7A5C10] hover:to-gold-600
+                         shadow-sm shadow-gold-600/15 transition-all"
             >
               CSV 다운로드
             </button>
             <Link
               to="/"
-              className="text-xs px-3 py-1.5 rounded-full bg-sage-50 text-sage-600 hover:bg-sage-100 transition-colors"
+              className="text-[12px] px-4 py-2 rounded-full border border-gold-300 text-gold-600
+                         hover:bg-gold-50 transition-colors"
             >
               접수 화면
             </Link>
@@ -204,19 +207,19 @@ export default function AdminView() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 py-6">
+      <main className="max-w-5xl mx-auto px-4 py-5">
         {/* 통계 카드 */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-          <div className="bg-white rounded-xl p-4 border border-sage-50">
-            <p className="text-xs text-sage-400">전체</p>
-            <p className="text-xl font-bold text-sage-700 mt-1">{formatAmount(stats.total)}원</p>
-            <p className="text-xs text-sage-400 mt-0.5">{stats.count}명</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+          <div className="bg-ivory rounded-2xl p-4 border border-gold-200 shadow-sm shadow-gold-600/5">
+            <p className="text-[11px] text-gold-500">전체</p>
+            <p className="text-xl font-extrabold text-gold-600 mt-1">{formatAmount(stats.total)}원</p>
+            <p className="text-[11px] text-gold-400 mt-0.5">{stats.count}명</p>
           </div>
           {Object.entries(stats.bySide).map(([side, data]) => (
-            <div key={side} className="bg-white rounded-xl p-4 border border-sage-50">
-              <p className="text-xs text-sage-400">{side}</p>
-              <p className="text-lg font-bold text-sage-700 mt-1">{formatAmount(data.amount)}원</p>
-              <p className="text-xs text-sage-400 mt-0.5">{data.count}명</p>
+            <div key={side} className="bg-ivory rounded-2xl p-4 border border-gold-200 shadow-sm shadow-gold-600/5">
+              <p className="text-[11px] text-gold-500">{side}</p>
+              <p className="text-lg font-bold text-gold-800 mt-1">{formatAmount(data.amount)}원</p>
+              <p className="text-[11px] text-gold-400 mt-0.5">{data.count}명</p>
             </div>
           ))}
         </div>
@@ -228,24 +231,24 @@ export default function AdminView() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="이름, 메모, 관계로 검색..."
-            className="flex-1 px-4 py-2.5 rounded-xl border-2 border-sage-100 bg-white
-                       focus:border-sage-400 focus:outline-none text-sm
-                       placeholder:text-sage-300"
+            className="flex-1 px-4 py-2.5 rounded-xl border border-gold-200 bg-ivory
+                       focus:border-gold-600 focus:outline-none text-sm text-gold-800
+                       placeholder:text-gold-300"
           />
-          <div className="flex gap-2 flex-wrap">
-            {['전체', ...SIDE_OPTIONS].map((side) => (
+          <div className="flex gap-1.5 flex-wrap">
+            {['전체', ...SIDE_OPTIONS].map((s) => (
               <button
-                key={side}
-                onClick={() => setFilterSide(side)}
-                className={`px-3 py-2 rounded-full text-xs font-medium transition-colors
-                  ${filterSide === side
-                    ? 'bg-sage-600 text-white'
-                    : 'bg-sage-50 text-sage-600 hover:bg-sage-100'
+                key={s}
+                onClick={() => setFilterSide(s)}
+                className={`px-3 py-2 rounded-full text-[12px] font-medium transition-all border
+                  ${filterSide === s
+                    ? 'bg-gold-600 text-white border-gold-600'
+                    : 'bg-ivory text-gold-600 border-gold-300 hover:bg-gold-50'
                   }`}
               >
-                {side}
-                {side !== '전체' && stats.bySide[side] && (
-                  <span className="ml-1 opacity-70">{stats.bySide[side].count}</span>
+                {s}
+                {s !== '전체' && stats.bySide[s] && (
+                  <span className="ml-1 opacity-70">{stats.bySide[s].count}</span>
                 )}
               </button>
             ))}
@@ -255,7 +258,7 @@ export default function AdminView() {
         {/* 정렬 & 일괄 분류 */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <span className="text-xs text-sage-400">정렬:</span>
+            <span className="text-[11px] text-gold-400">정렬:</span>
             {[
               { key: 'created_at', label: '시간' },
               { key: 'name', label: '이름' },
@@ -271,10 +274,10 @@ export default function AdminView() {
                     setSortDir('desc')
                   }
                 }}
-                className={`text-xs px-2 py-1 rounded transition-colors
+                className={`text-[12px] px-2.5 py-1 rounded-lg transition-colors
                   ${sortBy === key
-                    ? 'bg-sage-200 text-sage-700 font-medium'
-                    : 'text-sage-400 hover:text-sage-600'
+                    ? 'bg-gold-100 text-gold-700 font-semibold'
+                    : 'text-gold-400 hover:text-gold-600'
                   }`}
               >
                 {label}
@@ -283,40 +286,41 @@ export default function AdminView() {
             ))}
           </div>
 
-          {/* 일괄 분류 */}
           <div className="flex items-center gap-1">
-            <span className="text-xs text-sage-400 mr-1">일괄분류:</span>
-            {SIDE_OPTIONS.filter(s => s !== '미분류').map(side => (
+            <span className="text-[11px] text-gold-400 mr-1">일괄분류:</span>
+            {SIDE_OPTIONS.filter(s => s !== '미분류').map(s => (
               <button
-                key={side}
-                onClick={() => bulkClassify(side)}
-                className="text-xs px-2 py-1 rounded bg-warm-50 text-warm-600 hover:bg-warm-100 transition-colors"
+                key={s}
+                onClick={() => bulkClassify(s)}
+                className="text-[11px] px-2 py-1 rounded-lg bg-gold-50 text-gold-600
+                           border border-gold-200 hover:bg-gold-100 transition-colors"
               >
-                {side}
+                {s}
               </button>
             ))}
           </div>
         </div>
 
         {/* 테이블 */}
-        <div className="bg-white rounded-xl border border-sage-50 overflow-hidden">
+        <div className="bg-ivory rounded-2xl border border-gold-200 overflow-hidden
+                        shadow-sm shadow-gold-600/5">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-sage-50/50">
-                  <th className="text-left px-4 py-3 text-sage-500 font-medium">이름</th>
-                  <th className="text-right px-4 py-3 text-sage-500 font-medium">금액</th>
-                  <th className="text-left px-4 py-3 text-sage-500 font-medium">구분</th>
-                  <th className="text-left px-4 py-3 text-sage-500 font-medium">관계</th>
-                  <th className="text-left px-4 py-3 text-sage-500 font-medium">메모</th>
-                  <th className="text-left px-4 py-3 text-sage-500 font-medium">시간</th>
-                  <th className="text-center px-4 py-3 text-sage-500 font-medium">편집</th>
+                <tr className="bg-gold-50/70">
+                  <th className="text-left px-4 py-3 text-[12px] text-gold-500 font-semibold">이름</th>
+                  <th className="text-right px-4 py-3 text-[12px] text-gold-500 font-semibold">금액</th>
+                  <th className="text-left px-4 py-3 text-[12px] text-gold-500 font-semibold">구분</th>
+                  <th className="text-left px-4 py-3 text-[12px] text-gold-500 font-semibold">관계</th>
+                  <th className="text-left px-4 py-3 text-[12px] text-gold-500 font-semibold">메모</th>
+                  <th className="text-left px-4 py-3 text-[12px] text-gold-500 font-semibold">시간</th>
+                  <th className="text-center px-4 py-3 text-[12px] text-gold-500 font-semibold">편집</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-sage-50">
+              <tbody className="divide-y divide-gold-100">
                 {filteredGuests.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center py-12 text-sage-300">
+                    <td colSpan={7} className="text-center py-12 text-gold-300">
                       {search ? '검색 결과가 없습니다' : '접수 내역이 없습니다'}
                     </td>
                   </tr>
@@ -324,123 +328,87 @@ export default function AdminView() {
                   filteredGuests.map((guest) => (
                     <tr
                       key={guest.id}
-                      className={`hover:bg-sage-50/30 transition-colors ${
-                        guest.side === '미분류' ? 'bg-warm-50/30' : ''
+                      className={`hover:bg-gold-50/50 transition-colors ${
+                        guest.side === '미분류' ? 'bg-gold-50/30' : ''
                       }`}
                     >
                       {editingId === guest.id ? (
                         <>
                           <td className="px-3 py-2">
-                            <input
-                              type="text"
-                              value={editForm.name}
+                            <input type="text" value={editForm.name}
                               onChange={(e) => setEditForm(f => ({ ...f, name: e.target.value }))}
-                              className="w-full px-2 py-1 border border-sage-200 rounded text-sm"
-                            />
+                              className="w-full px-2 py-1 border border-gold-200 rounded-lg text-sm bg-parchment" />
                           </td>
                           <td className="px-3 py-2">
-                            <input
-                              type="number"
-                              value={editForm.amount}
+                            <input type="number" value={editForm.amount}
                               onChange={(e) => setEditForm(f => ({ ...f, amount: e.target.value }))}
-                              className="w-full px-2 py-1 border border-sage-200 rounded text-sm text-right"
-                              inputMode="numeric"
-                            />
+                              className="w-full px-2 py-1 border border-gold-200 rounded-lg text-sm text-right bg-parchment"
+                              inputMode="numeric" />
                           </td>
                           <td className="px-3 py-2">
-                            <select
-                              value={editForm.side}
+                            <select value={editForm.side}
                               onChange={(e) => setEditForm(f => ({ ...f, side: e.target.value }))}
-                              className="w-full px-2 py-1 border border-sage-200 rounded text-sm bg-white"
-                            >
-                              {SIDE_OPTIONS.map(s => (
-                                <option key={s} value={s}>{s}</option>
-                              ))}
+                              className="w-full px-2 py-1 border border-gold-200 rounded-lg text-sm bg-ivory">
+                              {SIDE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
                             </select>
                           </td>
                           <td className="px-3 py-2">
-                            <input
-                              type="text"
-                              value={editForm.relation}
+                            <input type="text" value={editForm.relation}
                               onChange={(e) => setEditForm(f => ({ ...f, relation: e.target.value }))}
-                              placeholder="예: 대학동기"
-                              className="w-full px-2 py-1 border border-sage-200 rounded text-sm"
-                            />
+                              placeholder="관계"
+                              className="w-full px-2 py-1 border border-gold-200 rounded-lg text-sm bg-parchment" />
                           </td>
                           <td className="px-3 py-2">
-                            <input
-                              type="text"
-                              value={editForm.memo}
+                            <input type="text" value={editForm.memo}
                               onChange={(e) => setEditForm(f => ({ ...f, memo: e.target.value }))}
                               placeholder="메모"
-                              className="w-full px-2 py-1 border border-sage-200 rounded text-sm"
-                            />
+                              className="w-full px-2 py-1 border border-gold-200 rounded-lg text-sm bg-parchment" />
                           </td>
-                          <td className="px-3 py-2 text-xs text-sage-400">
+                          <td className="px-3 py-2 text-[11px] text-gold-400">
                             {new Date(guest.created_at).toLocaleTimeString('ko-KR', {
                               hour: '2-digit', minute: '2-digit'
                             })}
                           </td>
                           <td className="px-3 py-2">
                             <div className="flex gap-1 justify-center">
-                              <button
-                                onClick={() => saveEdit(guest.id)}
-                                className="px-2 py-1 text-xs rounded bg-sage-600 text-white hover:bg-sage-700"
-                              >
-                                저장
-                              </button>
-                              <button
-                                onClick={cancelEdit}
-                                className="px-2 py-1 text-xs rounded bg-sage-100 text-sage-600 hover:bg-sage-200"
-                              >
-                                취소
-                              </button>
+                              <button onClick={() => saveEdit(guest.id)}
+                                className="px-2.5 py-1 text-[11px] rounded-lg bg-gold-600 text-white font-semibold
+                                           hover:bg-gold-700">저장</button>
+                              <button onClick={cancelEdit}
+                                className="px-2.5 py-1 text-[11px] rounded-lg bg-gold-100 text-gold-600
+                                           hover:bg-gold-200">취소</button>
                             </div>
                           </td>
                         </>
                       ) : (
                         <>
                           <td className="px-4 py-3">
-                            <span className="font-medium text-sage-700">{guest.name}</span>
+                            <span className="font-semibold text-gold-800">{guest.name}</span>
                           </td>
-                          <td className="px-4 py-3 text-right font-semibold text-sage-700">
+                          <td className="px-4 py-3 text-right font-bold text-gold-600">
                             {formatAmount(guest.amount)}원
                           </td>
                           <td className="px-4 py-3">
-                            <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium
-                              ${guest.side === '미분류'
-                                ? 'bg-warm-100 text-warm-600'
-                                : guest.side === '신랑측'
-                                ? 'bg-blue-50 text-blue-600'
-                                : guest.side === '신부측'
-                                ? 'bg-blush-50 text-blush-500'
-                                : 'bg-sage-100 text-sage-600'
-                              }`}
-                            >
+                            <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold
+                              ${getSideBadgeClasses(guest.side || '미분류')}`}>
                               {guest.side || '미분류'}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-sage-500">{guest.relation || '-'}</td>
-                          <td className="px-4 py-3 text-sage-500">{guest.memo || '-'}</td>
-                          <td className="px-4 py-3 text-xs text-sage-400">
+                          <td className="px-4 py-3 text-gold-500">{guest.relation || '-'}</td>
+                          <td className="px-4 py-3 text-gold-500">{guest.memo || '-'}</td>
+                          <td className="px-4 py-3 text-[11px] text-gold-400">
                             {new Date(guest.created_at).toLocaleTimeString('ko-KR', {
                               hour: '2-digit', minute: '2-digit'
                             })}
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex gap-1 justify-center">
-                              <button
-                                onClick={() => startEdit(guest)}
-                                className="px-2 py-1 text-xs rounded bg-sage-50 text-sage-600 hover:bg-sage-100"
-                              >
-                                수정
-                              </button>
-                              <button
-                                onClick={() => deleteGuest(guest.id, guest.name)}
-                                className="px-2 py-1 text-xs rounded bg-red-50 text-red-500 hover:bg-red-100"
-                              >
-                                삭제
-                              </button>
+                              <button onClick={() => startEdit(guest)}
+                                className="px-2.5 py-1 text-[11px] rounded-lg bg-gold-50 text-gold-600
+                                           border border-gold-200 hover:bg-gold-100">수정</button>
+                              <button onClick={() => deleteGuest(guest.id, guest.name)}
+                                className="px-2.5 py-1 text-[11px] rounded-lg bg-bride-50 text-bride-600
+                                           border border-bride-200 hover:bg-bride-100">삭제</button>
                             </div>
                           </td>
                         </>
@@ -453,10 +421,9 @@ export default function AdminView() {
           </div>
         </div>
 
-        {/* 하단 요약 */}
-        <div className="mt-4 text-right text-sm text-sage-500">
+        <div className="mt-4 text-right text-sm text-gold-500">
           필터 결과: {filteredGuests.length}명 ·{' '}
-          <span className="font-semibold text-sage-700">
+          <span className="font-bold text-gold-600">
             {formatAmount(filteredGuests.reduce((s, g) => s + (g.amount || 0), 0))}원
           </span>
         </div>

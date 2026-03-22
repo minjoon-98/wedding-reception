@@ -8,8 +8,9 @@
 
 body {
   font-family: 'Pretendard', system-ui, sans-serif;
-  background-color: #FFFEF7;
+  background: linear-gradient(180deg, #F9F6EF 0%, #F0EBE0 100%);
   -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
 }
 
 input[type="number"]::-webkit-inner-spin-button,
@@ -62,10 +63,14 @@ input[type="number"] {
 
 /* 금액 빠른 입력 버튼 */
 .amount-chip {
-  @apply px-3 py-2 rounded-full text-sm font-medium transition-all duration-150 active:scale-95;
-  @apply bg-sage-100 text-sage-700 hover:bg-sage-200;
+  @apply px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 active:scale-95;
+  @apply bg-ivory text-gold-700 border border-gold-300;
 }
 
-.amount-chip:active {
-  @apply bg-sage-300;
+.amount-chip:hover {
+  @apply bg-gold-50;
+}
+
+.amount-chip.selected {
+  @apply bg-gold-50 border-2 border-gold-600 text-gold-600 font-bold;
 }
