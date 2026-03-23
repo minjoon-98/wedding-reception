@@ -26,6 +26,7 @@ export default function AdminView() {
   const [editForm, setEditForm] = useState({})
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(new Set())
+  const recorder = localStorage.getItem('wedding_recorder') || ''
 
   useEffect(() => {
     fetchGuests()
@@ -123,13 +124,14 @@ export default function AdminView() {
     if (!window.confirm(`선택한 ${selected.size}명을 "${targetSide}"(으)로 변경하시겠습니까?`)) return
 
     const ids = [...selected]
+    const now = new Date().toISOString()
     for (const id of ids) {
-      await supabase.from('guests').update({ side: targetSide }).eq('id', id)
+      await supabase.from('guests').update({ side: targetSide, updated_by: recorder, updated_at: now }).eq('id', id)
     }
 
     // 즉시 로컬 반영
     setGuests(prev => prev.map(g =>
-      selected.has(g.id) ? { ...g, side: targetSide } : g
+      selected.has(g.id) ? { ...g, side: targetSide, updated_by: recorder, updated_at: now } : g
     ))
     setSelected(new Set())
   }
@@ -153,6 +155,8 @@ export default function AdminView() {
       side: editForm.side,
       relation: editForm.relation,
       memo: editForm.memo,
+      updated_by: recorder,
+      updated_at: new Date().toISOString(),
     }
 
     const { error } = await supabase
@@ -437,10 +441,20 @@ export default function AdminView() {
                               {formatAmount(guest.amount)}원
                             </span>
                           </div>
-                          <div className="flex items-center gap-2 mt-1.5 text-[11px] text-gold-400">
+                          <div className="flex items-center gap-2 mt-1.5 text-[11px] text-gold-400 flex-wrap">
                             <span>{new Date(guest.created_at).toLocaleTimeString('ko-KR', {
                               hour: '2-digit', minute: '2-digit'
                             })}</span>
+                            {guest.recorded_by && (
+                              <span className="px-1.5 py-0.5 rounded bg-gold-100 text-gold-600 text-[10px] font-medium">
+                                접수: {guest.recorded_by}
+                              </span>
+                            )}
+                            {guest.updated_by && (
+                              <span className="px-1.5 py-0.5 rounded bg-groom-50 text-groom-600 text-[10px] font-medium">
+                                수정: {guest.updated_by}
+                              </span>
+                            )}
                             {guest.relation && <span>· {guest.relation}</span>}
                             {guest.memo && <span className="text-gold-300">· {guest.memo}</span>}
                           </div>
@@ -565,8 +579,20 @@ export default function AdminView() {
                           <td className="px-4 py-3 text-gold-500">{guest.relation || '-'}</td>
                           <td className="px-4 py-3 text-gold-500">{guest.memo || '-'}</td>
                           <td className="px-4 py-3 text-[11px] text-gold-400">
-                            {new Date(guest.created_at).toLocaleTimeString('ko-KR', {
-                              hour: '2-digit', minute: '2-digit' })}
+                            <div>{new Date(guest.created_at).toLocaleTimeString('ko-KR', {
+                              hour: '2-digit', minute: '2-digit' })}</div>
+                            <div className="flex gap-1 mt-0.5 flex-wrap">
+                              {guest.recorded_by && (
+                                <span className="px-1.5 py-0.5 rounded bg-gold-100 text-gold-600 text-[10px] font-medium">
+                                  접수: {guest.recorded_by}
+                                </span>
+                              )}
+                              {guest.updated_by && (
+                                <span className="px-1.5 py-0.5 rounded bg-groom-50 text-groom-600 text-[10px] font-medium">
+                                  수정: {guest.updated_by}
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex gap-1 justify-center">

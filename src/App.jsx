@@ -29,6 +29,8 @@ function getSideBadgeStyle(side) {
 }
 
 export default function App() {
+  const [recorder, setRecorder] = useState(() => localStorage.getItem('wedding_recorder') || '')
+  const [recorderInput, setRecorderInput] = useState('')
   const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
   const [side, setSide] = useState('미분류')
@@ -40,6 +42,23 @@ export default function App() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const nameInputRef = useRef(null)
+
+  // 접수자 이름 설정
+  function saveRecorder(val) {
+    const trimmed = val.trim()
+    if (!trimmed) return
+    localStorage.setItem('wedding_recorder', trimmed)
+    setRecorder(trimmed)
+  }
+
+  // 동명이인 경고
+  const duplicateWarning = useMemo(() => {
+    const trimmed = name.trim()
+    if (!trimmed) return null
+    const matches = allGuests.filter(g => g.name === trimmed)
+    if (matches.length === 0) return null
+    return `"${trimmed}" 이름으로 이미 ${matches.length}건 접수되어 있습니다`
+  }, [name, allGuests])
 
   useEffect(() => {
     fetchRecent()
@@ -69,7 +88,7 @@ export default function App() {
 
     const { data: allData } = await supabase
       .from('guests')
-      .select('id, amount, side')
+      .select('id, name, amount, side')
 
     if (allData) {
       setAllGuests(allData)
@@ -102,7 +121,7 @@ export default function App() {
         side,
         relation: relation.trim(),
         memo: memo.trim(),
-        recorded_by: '',
+        recorded_by: recorder,
       }])
       .select()
 
@@ -128,6 +147,48 @@ export default function App() {
     year: 'numeric', month: 'long', day: 'numeric', weekday: 'long',
   })
 
+  // 접수자 설정 안 됐으면 설정 화면
+  if (!recorder) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-5">
+        <div className="bg-ivory rounded-2xl p-8 border border-gold-200 shadow-sm shadow-gold-600/5
+                        max-w-sm w-full text-center">
+          <p className="text-[11px] tracking-[6px] text-gold-400 uppercase font-medium">
+            Wedding Reception
+          </p>
+          <h1 className="font-display text-[22px] font-bold text-gold-800 mt-2">
+            접수자 설정
+          </h1>
+          <p className="text-[13px] text-gold-500 mt-2 mb-6">
+            이 기기에서 접수하는 분의 이름을 입력해주세요
+          </p>
+          <input
+            type="text"
+            value={recorderInput}
+            onChange={(e) => setRecorderInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && saveRecorder(recorderInput)}
+            placeholder="예: 민준, 삼촌"
+            className="w-full px-4 py-3.5 rounded-xl border border-gold-200 bg-parchment text-[16px]
+                       font-semibold text-gold-800 text-center
+                       focus:border-gold-600 focus:outline-none transition-all
+                       placeholder:text-gold-300"
+            autoFocus
+          />
+          <button
+            onClick={() => saveRecorder(recorderInput)}
+            disabled={!recorderInput.trim()}
+            className="w-full mt-4 py-3.5 rounded-xl text-white font-bold text-[15px]
+                       bg-gradient-to-br from-gold-600 to-[#A67C1E]
+                       disabled:from-gold-300 disabled:to-gold-300 disabled:cursor-not-allowed
+                       transition-all shadow-md shadow-gold-600/15"
+          >
+            시작하기
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen pb-10">
       {/* ── Header ── */}
@@ -139,14 +200,25 @@ export default function App() {
           축의금 접수
         </h1>
         <p className="text-[13px] text-gold-500 mt-1.5">{todayStr}</p>
-        <Link
-          to="/admin"
-          className="inline-block mt-3 text-[11px] px-4 py-1.5 rounded-full
-                     border border-gold-300 text-gold-600 hover:bg-gold-50
-                     transition-colors"
-        >
-          관리자 보기
-        </Link>
+        <div className="flex items-center justify-center gap-3 mt-3">
+          <span className="text-[12px] text-gold-400">
+            접수자: <span className="font-semibold text-gold-600">{recorder}</span>
+          </span>
+          <button
+            onClick={() => { localStorage.removeItem('wedding_recorder'); setRecorder('') }}
+            className="text-[10px] text-gold-300 hover:text-gold-500 transition-colors"
+          >
+            변경
+          </button>
+          <Link
+            to="/admin"
+            className="text-[11px] px-4 py-1.5 rounded-full
+                       border border-gold-300 text-gold-600 hover:bg-gold-50
+                       transition-colors"
+          >
+            관리자 보기
+          </Link>
+        </div>
       </header>
 
       {/* ── Success Toast ── */}
@@ -209,6 +281,11 @@ export default function App() {
                          placeholder:text-gold-300"
               autoComplete="off"
             />
+            {duplicateWarning && (
+              <p className="mt-1.5 text-[12px] text-bride-600 font-medium animate-slide-up">
+                ⚠ {duplicateWarning} (동명이인이면 그대로 접수 가능)
+              </p>
+            )}
           </div>
 
           {/* 금액 */}
