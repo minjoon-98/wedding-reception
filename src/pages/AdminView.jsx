@@ -34,7 +34,21 @@ export default function AdminView() {
     const channel = supabase
       .channel('admin-realtime')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'guests' }, (payload) => {
-        setGuests(prev => [payload.new, ...prev])
+        setGuests(prev => {
+          if (prev.some(g => g.id === payload.new.id)) return prev
+          return [payload.new, ...prev]
+        })
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'guests' }, (payload) => {
+        setGuests(prev => prev.map(g => g.id === payload.new.id ? payload.new : g))
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'guests' }, (payload) => {
+        setGuests(prev => prev.filter(g => g.id !== payload.old.id))
+        setSelected(prev => {
+          const next = new Set(prev)
+          next.delete(payload.old.id)
+          return next
+        })
       })
       .subscribe()
 

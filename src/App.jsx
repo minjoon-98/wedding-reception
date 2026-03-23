@@ -65,8 +65,23 @@ export default function App() {
 
     const channel = supabase
       .channel('guests-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'guests' }, () => {
-        fetchRecent()
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'guests' }, (payload) => {
+        setRecentGuests(prev => {
+          if (prev.some(g => g.id === payload.new.id)) return prev
+          return [payload.new, ...prev].slice(0, 10)
+        })
+        setAllGuests(prev => {
+          if (prev.some(g => g.id === payload.new.id)) return prev
+          return [...prev, payload.new]
+        })
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'guests' }, (payload) => {
+        setRecentGuests(prev => prev.map(g => g.id === payload.new.id ? payload.new : g))
+        setAllGuests(prev => prev.map(g => g.id === payload.new.id ? payload.new : g))
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'guests' }, (payload) => {
+        setRecentGuests(prev => prev.filter(g => g.id !== payload.old.id))
+        setAllGuests(prev => prev.filter(g => g.id !== payload.old.id))
       })
       .subscribe()
 
