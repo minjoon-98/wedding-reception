@@ -25,14 +25,15 @@ export default function AdminView() {
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({})
   const [loading, setLoading] = useState(true)
+  const [selected, setSelected] = useState(new Set())
 
   useEffect(() => {
     fetchGuests()
 
     const channel = supabase
       .channel('admin-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'guests' }, () => {
-        fetchGuests()
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'guests' }, (payload) => {
+        setGuests(prev => [payload.new, ...prev])
       })
       .subscribe()
 
@@ -98,6 +99,42 @@ export default function AdminView() {
     return { total, count: guests.length, bySide }
   }, [guests])
 
+  // ── 체크박스 ──
+  function toggleSelect(id) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleSelectAll() {
+    if (selected.size === filteredGuests.length) {
+      setSelected(new Set())
+    } else {
+      setSelected(new Set(filteredGuests.map(g => g.id)))
+    }
+  }
+
+  // ── 선택된 항목 일괄 분류 ──
+  async function bulkClassifySelected(targetSide) {
+    if (selected.size === 0) return
+    if (!window.confirm(`선택한 ${selected.size}명을 "${targetSide}"(으)로 변경하시겠습니까?`)) return
+
+    const ids = [...selected]
+    for (const id of ids) {
+      await supabase.from('guests').update({ side: targetSide }).eq('id', id)
+    }
+
+    // 즉시 로컬 반영
+    setGuests(prev => prev.map(g =>
+      selected.has(g.id) ? { ...g, side: targetSide } : g
+    ))
+    setSelected(new Set())
+  }
+
+  // ── 인라인 수정 ──
   function startEdit(guest) {
     setEditingId(guest.id)
     setEditForm({
@@ -110,18 +147,22 @@ export default function AdminView() {
   }
 
   async function saveEdit(id) {
+    const updates = {
+      name: editForm.name,
+      amount: parseInt(editForm.amount) || 0,
+      side: editForm.side,
+      relation: editForm.relation,
+      memo: editForm.memo,
+    }
+
     const { error } = await supabase
       .from('guests')
-      .update({
-        name: editForm.name,
-        amount: parseInt(editForm.amount) || 0,
-        side: editForm.side,
-        relation: editForm.relation,
-        memo: editForm.memo,
-      })
+      .update(updates)
       .eq('id', id)
 
     if (!error) {
+      // 즉시 로컬 반영
+      setGuests(prev => prev.map(g => g.id === id ? { ...g, ...updates } : g))
       setEditingId(null)
       setEditForm({})
     }
@@ -134,7 +175,16 @@ export default function AdminView() {
 
   async function deleteGuest(id, name) {
     if (!window.confirm(`"${name}" 항목을 삭제하시겠습니까?`)) return
-    await supabase.from('guests').delete().eq('id', id)
+    const { error } = await supabase.from('guests').delete().eq('id', id)
+    if (!error) {
+      // 즉시 로컬 반영
+      setGuests(prev => prev.filter(g => g.id !== id))
+      setSelected(prev => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
+    }
   }
 
   function downloadCSV() {
@@ -159,16 +209,6 @@ export default function AdminView() {
     URL.revokeObjectURL(url)
   }
 
-  async function bulkClassify(targetSide) {
-    const unclassified = filteredGuests.filter(g => g.side === '미분류')
-    if (unclassified.length === 0) return
-    if (!window.confirm(`필터된 미분류 ${unclassified.length}명을 "${targetSide}"(으)로 변경하시겠습니까?`)) return
-
-    for (const g of unclassified) {
-      await supabase.from('guests').update({ side: targetSide }).eq('id', g.id)
-    }
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -176,6 +216,8 @@ export default function AdminView() {
       </div>
     )
   }
+
+  const allChecked = filteredGuests.length > 0 && selected.size === filteredGuests.length
 
   return (
     <div className="min-h-screen pb-10">
@@ -255,8 +297,8 @@ export default function AdminView() {
           </div>
         </div>
 
-        {/* 정렬 & 일괄 분류 */}
-        <div className="flex items-center justify-between mb-3">
+        {/* 정렬 & 선택 일괄 분류 */}
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <span className="text-[11px] text-gold-400">정렬:</span>
             {[
@@ -286,28 +328,151 @@ export default function AdminView() {
             ))}
           </div>
 
-          <div className="flex items-center gap-1">
-            <span className="text-[11px] text-gold-400 mr-1">일괄분류:</span>
-            {SIDE_OPTIONS.filter(s => s !== '미분류').map(s => (
+          {/* 선택 항목 일괄 분류 */}
+          {selected.size > 0 && (
+            <div className="flex items-center gap-1.5 bg-gold-50 rounded-xl px-3 py-1.5 border border-gold-200
+                            animate-slide-up">
+              <span className="text-[12px] font-semibold text-gold-700">
+                {selected.size}명 선택
+              </span>
+              <span className="text-gold-300 mx-1">|</span>
+              {SIDE_OPTIONS.filter(s => s !== '미분류').map(s => {
+                const isGroom = s === '신랑측' || s === '신랑 부모님'
+                const isBride = s === '신부측' || s === '신부 부모님'
+                return (
+                  <button
+                    key={s}
+                    onClick={() => bulkClassifySelected(s)}
+                    className={`text-[11px] px-2.5 py-1 rounded-lg font-semibold transition-colors
+                      ${isGroom ? 'bg-groom-100 text-groom-600 hover:bg-groom-200'
+                        : isBride ? 'bg-bride-100 text-bride-600 hover:bg-bride-200'
+                        : 'bg-gold-100 text-gold-600 hover:bg-gold-200'}`}
+                  >
+                    {s}
+                  </button>
+                )
+              })}
               <button
-                key={s}
-                onClick={() => bulkClassify(s)}
-                className="text-[11px] px-2 py-1 rounded-lg bg-gold-50 text-gold-600
-                           border border-gold-200 hover:bg-gold-100 transition-colors"
+                onClick={() => setSelected(new Set())}
+                className="text-[11px] px-2 py-1 rounded-lg text-gold-400 hover:text-gold-600
+                           ml-1"
               >
-                {s}
+                취소
               </button>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
 
-        {/* 테이블 */}
-        <div className="bg-ivory rounded-2xl border border-gold-200 overflow-hidden
+        {/* ── 모바일: 전체선택 + 카드 리스트 ── */}
+        <div className="sm:hidden">
+          <div className="flex items-center gap-2 mb-3 px-1">
+            <input
+              type="checkbox"
+              checked={allChecked}
+              onChange={toggleSelectAll}
+              className="w-4 h-4 rounded accent-[#8B6914] cursor-pointer"
+            />
+            <span className="text-[12px] text-gold-500">전체 선택</span>
+          </div>
+
+          {filteredGuests.length === 0 ? (
+            <p className="text-center text-gold-300 py-10 text-sm">
+              {search ? '검색 결과가 없습니다' : '접수 내역이 없습니다'}
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {filteredGuests.map((guest) => (
+                <div
+                  key={guest.id}
+                  className={`bg-ivory rounded-xl border border-gold-200 p-4
+                              ${selected.has(guest.id) ? 'ring-2 ring-gold-600/30' : ''}`}
+                >
+                  {editingId === guest.id ? (
+                    <div className="space-y-2.5">
+                      <input type="text" value={editForm.name}
+                        onChange={(e) => setEditForm(f => ({ ...f, name: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gold-200 rounded-lg text-sm bg-parchment"
+                        placeholder="이름" />
+                      <input type="number" value={editForm.amount}
+                        onChange={(e) => setEditForm(f => ({ ...f, amount: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gold-200 rounded-lg text-sm bg-parchment text-right"
+                        placeholder="금액" inputMode="numeric" />
+                      <select value={editForm.side}
+                        onChange={(e) => setEditForm(f => ({ ...f, side: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gold-200 rounded-lg text-sm bg-ivory">
+                        {SIDE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                      <input type="text" value={editForm.relation}
+                        onChange={(e) => setEditForm(f => ({ ...f, relation: e.target.value }))}
+                        placeholder="관계" className="w-full px-3 py-2 border border-gold-200 rounded-lg text-sm bg-parchment" />
+                      <input type="text" value={editForm.memo}
+                        onChange={(e) => setEditForm(f => ({ ...f, memo: e.target.value }))}
+                        placeholder="메모" className="w-full px-3 py-2 border border-gold-200 rounded-lg text-sm bg-parchment" />
+                      <div className="flex gap-2">
+                        <button onClick={() => saveEdit(guest.id)}
+                          className="flex-1 py-2 text-[12px] rounded-lg bg-gold-600 text-white font-semibold">저장</button>
+                        <button onClick={cancelEdit}
+                          className="flex-1 py-2 text-[12px] rounded-lg bg-gold-100 text-gold-600">취소</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          checked={selected.has(guest.id)}
+                          onChange={() => toggleSelect(guest.id)}
+                          className="w-4 h-4 mt-1 rounded accent-[#8B6914] cursor-pointer flex-shrink-0"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-gold-800">{guest.name}</span>
+                              <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold
+                                ${getSideBadgeClasses(guest.side || '미분류')}`}>
+                                {guest.side || '미분류'}
+                              </span>
+                            </div>
+                            <span className="font-bold text-gold-600 text-[15px]">
+                              {formatAmount(guest.amount)}원
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1.5 text-[11px] text-gold-400">
+                            <span>{new Date(guest.created_at).toLocaleTimeString('ko-KR', {
+                              hour: '2-digit', minute: '2-digit'
+                            })}</span>
+                            {guest.relation && <span>· {guest.relation}</span>}
+                            {guest.memo && <span className="text-gold-300">· {guest.memo}</span>}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-1.5 mt-2.5 ml-7">
+                        <button onClick={() => startEdit(guest)}
+                          className="px-3 py-1.5 text-[11px] rounded-lg bg-gold-50 text-gold-600
+                                     border border-gold-200">수정</button>
+                        <button onClick={() => deleteGuest(guest.id, guest.name)}
+                          className="px-3 py-1.5 text-[11px] rounded-lg bg-bride-50 text-bride-600
+                                     border border-bride-200">삭제</button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── 데스크탑: 테이블 ── */}
+        <div className="hidden sm:block bg-ivory rounded-2xl border border-gold-200 overflow-hidden
                         shadow-sm shadow-gold-600/5">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gold-50/70">
+                  <th className="w-10 px-3 py-3">
+                    <input type="checkbox" checked={allChecked} onChange={toggleSelectAll}
+                      className="w-4 h-4 rounded accent-[#8B6914] cursor-pointer" />
+                  </th>
                   <th className="text-left px-4 py-3 text-[12px] text-gold-500 font-semibold">이름</th>
                   <th className="text-right px-4 py-3 text-[12px] text-gold-500 font-semibold">금액</th>
                   <th className="text-left px-4 py-3 text-[12px] text-gold-500 font-semibold">구분</th>
@@ -320,18 +485,22 @@ export default function AdminView() {
               <tbody className="divide-y divide-gold-100">
                 {filteredGuests.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center py-12 text-gold-300">
+                    <td colSpan={8} className="text-center py-12 text-gold-300">
                       {search ? '검색 결과가 없습니다' : '접수 내역이 없습니다'}
                     </td>
                   </tr>
                 ) : (
                   filteredGuests.map((guest) => (
-                    <tr
-                      key={guest.id}
+                    <tr key={guest.id}
                       className={`hover:bg-gold-50/50 transition-colors ${
+                        selected.has(guest.id) ? 'bg-gold-50/60' :
                         guest.side === '미분류' ? 'bg-gold-50/30' : ''
-                      }`}
-                    >
+                      }`}>
+                      <td className="w-10 px-3 py-3">
+                        <input type="checkbox" checked={selected.has(guest.id)}
+                          onChange={() => toggleSelect(guest.id)}
+                          className="w-4 h-4 rounded accent-[#8B6914] cursor-pointer" />
+                      </td>
                       {editingId === guest.id ? (
                         <>
                           <td className="px-3 py-2">
@@ -366,8 +535,7 @@ export default function AdminView() {
                           </td>
                           <td className="px-3 py-2 text-[11px] text-gold-400">
                             {new Date(guest.created_at).toLocaleTimeString('ko-KR', {
-                              hour: '2-digit', minute: '2-digit'
-                            })}
+                              hour: '2-digit', minute: '2-digit' })}
                           </td>
                           <td className="px-3 py-2">
                             <div className="flex gap-1 justify-center">
@@ -398,8 +566,7 @@ export default function AdminView() {
                           <td className="px-4 py-3 text-gold-500">{guest.memo || '-'}</td>
                           <td className="px-4 py-3 text-[11px] text-gold-400">
                             {new Date(guest.created_at).toLocaleTimeString('ko-KR', {
-                              hour: '2-digit', minute: '2-digit'
-                            })}
+                              hour: '2-digit', minute: '2-digit' })}
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex gap-1 justify-center">

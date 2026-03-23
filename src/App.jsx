@@ -94,7 +94,7 @@ export default function App() {
 
     setIsSubmitting(true)
 
-    const { error } = await supabase
+    const { data: inserted, error } = await supabase
       .from('guests')
       .insert([{
         name: name.trim(),
@@ -104,10 +104,13 @@ export default function App() {
         memo: memo.trim(),
         recorded_by: '',
       }])
+      .select()
 
     setIsSubmitting(false)
 
-    if (!error) {
+    if (!error && inserted) {
+      setRecentGuests(prev => [inserted[0], ...prev].slice(0, 10))
+      setAllGuests(prev => [...prev, inserted[0]])
       setName('')
       setAmount('')
       setSide('미분류')
