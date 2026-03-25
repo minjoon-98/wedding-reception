@@ -1,13 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
+import { formatAmount, formatDateTime } from '../lib/format'
 import { Link } from 'react-router-dom'
 
 const SIDE_OPTIONS = ['미분류', '신랑측', '신부측', '신랑 부모님', '신부 부모님', '기타']
-
-function formatAmount(num) {
-  if (!num) return '0'
-  return num.toLocaleString('ko-KR')
-}
 
 function getSideBadgeClasses(side) {
   if (side === '신랑측' || side === '신랑 부모님') return 'bg-groom-100 text-groom-600'
@@ -213,7 +209,7 @@ export default function AdminView() {
       g.side || '미분류',
       g.relation || '',
       g.memo || '',
-      new Date(g.created_at).toLocaleString('ko-KR'),
+      formatDateTime(g.created_at),
     ])
 
     const bom = '\uFEFF'
@@ -456,9 +452,7 @@ export default function AdminView() {
                             </span>
                           </div>
                           <div className="flex items-center gap-2 mt-1.5 text-[11px] text-gold-400 flex-wrap">
-                            <span>{new Date(guest.created_at).toLocaleTimeString('ko-KR', {
-                              hour: '2-digit', minute: '2-digit'
-                            })}</span>
+                            <span>{formatDateTime(guest.created_at)}</span>
                             {guest.recorded_by && (
                               <span className="px-1.5 py-0.5 rounded bg-gold-100 text-gold-600 text-[10px] font-medium">
                                 접수: {guest.recorded_by}
@@ -593,8 +587,7 @@ export default function AdminView() {
                           <td className="px-4 py-3 text-gold-500">{guest.relation || '-'}</td>
                           <td className="px-4 py-3 text-gold-500">{guest.memo || '-'}</td>
                           <td className="px-4 py-3 text-[11px] text-gold-400">
-                            <div>{new Date(guest.created_at).toLocaleTimeString('ko-KR', {
-                              hour: '2-digit', minute: '2-digit' })}</div>
+                            <div>{formatDateTime(guest.created_at)}</div>
                             <div className="flex gap-1 mt-0.5 flex-wrap">
                               {guest.recorded_by && (
                                 <span className="px-1.5 py-0.5 rounded bg-gold-100 text-gold-600 text-[10px] font-medium">

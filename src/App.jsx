@@ -1,22 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { supabase } from './lib/supabase'
+import { formatAmount, formatAmountShort, formatDateTime } from './lib/format'
 import { Link } from 'react-router-dom'
 
 const QUICK_AMOUNTS = [30000, 50000, 70000, 100000, 150000, 200000, 300000, 500000]
 const SIDE_OPTIONS = ['미분류', '신랑측', '신부측', '신랑 부모님', '신부 부모님', '기타']
-
-function formatAmount(num) {
-  if (!num) return '0'
-  return num.toLocaleString('ko-KR')
-}
-
-function formatAmountShort(num) {
-  if (num >= 10000) {
-    const man = num / 10000
-    return `${man}만`
-  }
-  return formatAmount(num)
-}
 
 function getSideBadgeStyle(side) {
   if (side === '신랑측' || side === '신랑 부모님') {
@@ -477,10 +465,7 @@ export default function App() {
                         )}
                       </p>
                       <p className="text-[11px] text-gold-400">
-                        {new Date(guest.created_at).toLocaleTimeString('ko-KR', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
+                        {formatDateTime(guest.created_at)}
                         {guest.memo && (
                           <span className="ml-1.5 text-gold-300">· {guest.memo}</span>
                         )}
