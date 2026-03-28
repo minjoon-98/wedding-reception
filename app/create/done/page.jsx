@@ -91,6 +91,17 @@ export default function DonePage() {
           </p>
         </div>
 
+        {/* PIN 경고 */}
+        <div className="rounded-xl border-2 border-red-300 bg-red-50 p-4 text-center space-y-2">
+          <p className="text-red-600 font-bold text-sm">
+            ⚠️ PIN 번호를 반드시 저장해주세요!
+          </p>
+          <p className="text-red-500 text-xs">
+            이 화면을 벗어나면 PIN을 다시 확인할 수 없습니다.<br />
+            스크린샷을 찍거나 메모해두세요.
+          </p>
+        </div>
+
         {/* Link display */}
         <div className="rounded-xl border border-gold-200 bg-parchment p-4">
           <p className="text-sm font-medium text-gold-600 mb-2">접수 링크</p>

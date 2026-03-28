@@ -96,33 +96,66 @@ export async function POST(request) {
 export async function GET(request) {
   const { searchParams } = new URL(request.url)
   const id = searchParams.get('id')
-
-  if (!id) {
-    return NextResponse.json(
-      { success: false, error: 'ID가 필요합니다.' },
-      { status: 400 },
-    )
-  }
+  const q = searchParams.get('q')
 
   const supabase = createSupabaseServer()
-  const { data: wedding, error } = await supabase
-    .from('weddings')
-    .select('groom_name, bride_name, wedding_date, venue_name')
-    .eq('id', id)
-    .single()
 
-  if (error || !wedding) {
-    return NextResponse.json(
-      { success: false, error: '결혼식을 찾을 수 없습니다.' },
-      { status: 404 },
-    )
+  // ID로 단일 조회
+  if (id) {
+    const { data: wedding, error } = await supabase
+      .from('weddings')
+      .select('id, groom_name, bride_name, wedding_date, venue_name, invitation_url')
+      .eq('id', id)
+      .single()
+
+    if (error || !wedding) {
+      return NextResponse.json(
+        { success: false, error: '결혼식을 찾을 수 없습니다.' },
+        { status: 404 },
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+      id: wedding.id,
+      groomName: wedding.groom_name,
+      brideName: wedding.bride_name,
+      weddingDate: wedding.wedding_date,
+      venueName: wedding.venue_name,
+      invitationUrl: wedding.invitation_url,
+    })
   }
 
-  return NextResponse.json({
-    success: true,
-    groomName: wedding.groom_name,
-    brideName: wedding.bride_name,
-    weddingDate: wedding.wedding_date,
-    venueName: wedding.venue_name,
-  })
+  // 검색 (이름, 장소, 날짜)
+  if (q) {
+    const trimmed = q.trim()
+    if (trimmed.length < 2) {
+      return NextResponse.json({ success: true, results: [] })
+    }
+
+    const { data: results, error } = await supabase
+      .from('weddings')
+      .select('id, groom_name, bride_name, wedding_date, venue_name, invitation_url')
+      .or(`groom_name.ilike.%${trimmed}%,bride_name.ilike.%${trimmed}%,venue_name.ilike.%${trimmed}%`)
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    if (error) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      success: true,
+      results: (results || []).map(w => ({
+        id: w.id,
+        groomName: w.groom_name,
+        brideName: w.bride_name,
+        weddingDate: w.wedding_date,
+        venueName: w.venue_name,
+        invitationUrl: w.invitation_url,
+      })),
+    })
+  }
+
+  return NextResponse.json({ success: false, error: 'id 또는 q 파라미터가 필요합니다.' }, { status: 400 })
 }
