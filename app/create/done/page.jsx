@@ -45,7 +45,7 @@ export default function DonePage() {
     return null
   }
 
-  const weddingLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/${data.id}`
+  const weddingLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/w/${data.id}`
 
   const cards = [
     {
