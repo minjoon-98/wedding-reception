@@ -9,6 +9,7 @@ export default function CreatePage() {
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [extractMethod, setExtractMethod] = useState('auto') // 'auto' | 'regex' | 'ai'
 
   async function handleCrawl() {
     if (!url.trim()) {
@@ -23,7 +24,7 @@ export default function CreatePage() {
       const res = await fetch('/api/crawl', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: url.trim() }),
+        body: JSON.stringify({ url: url.trim(), method: extractMethod }),
       })
 
       const result = await res.json()
@@ -82,6 +83,32 @@ export default function CreatePage() {
             disabled={loading}
             className="mt-2 w-full rounded-lg border border-gold-200 bg-ivory px-4 py-3 text-gold-800 placeholder-gold-300 outline-none focus:border-gold-400 focus:ring-2 focus:ring-gold-200 disabled:opacity-50"
           />
+
+          {/* 추출 방법 선택 */}
+          <div className="mt-4">
+            <p className="mb-2 text-xs text-gold-500">추출 방법</p>
+            <div className="flex gap-2">
+              {[
+                { value: 'auto', label: '자동 (정규식→AI)' },
+                { value: 'regex', label: '정규식만' },
+                { value: 'ai', label: 'AI 분석' },
+              ].map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setExtractMethod(value)}
+                  disabled={loading}
+                  className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition ${
+                    extractMethod === value
+                      ? 'border-gold-600 bg-gold-600 text-white'
+                      : 'border-gold-200 bg-ivory text-gold-600 hover:border-gold-400'
+                  } disabled:opacity-50`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {error && (
             <p className="mt-2 text-sm text-bride-600">{error}</p>
