@@ -30,12 +30,24 @@ export default function ConfirmPage() {
 
     try {
       const draft = JSON.parse(raw)
+
+      // weddingDate가 ISO 형식("2026-04-19T14:00:00")이면 date/time 분리
+      let dateStr = draft.weddingDate || ''
+      let timeStr = draft.weddingTime || ''
+      if (dateStr.includes('T')) {
+        const dt = new Date(dateStr)
+        if (!isNaN(dt.getTime())) {
+          dateStr = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
+          timeStr = `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`
+        }
+      }
+
       setForm((prev) => ({
         ...prev,
         groomName: draft.groomName || '',
         brideName: draft.brideName || '',
-        weddingDate: draft.weddingDate || '',
-        weddingTime: draft.weddingTime || '',
+        weddingDate: dateStr,
+        weddingTime: timeStr,
         venueName: draft.venueName || '',
         venueDetail: draft.venueDetail || '',
         venueAddress: draft.venueAddress || '',
@@ -64,7 +76,17 @@ export default function ConfirmPage() {
 
   function handleSubmit(e) {
     e.preventDefault()
-    sessionStorage.setItem('wedding_confirmed', JSON.stringify(form))
+    // date + time을 ISO 형식으로 합쳐서 저장
+    let weddingDate = null
+    if (form.weddingDate) {
+      weddingDate = form.weddingTime
+        ? `${form.weddingDate}T${form.weddingTime}:00`
+        : `${form.weddingDate}T12:00:00`
+    }
+    sessionStorage.setItem('wedding_confirmed', JSON.stringify({
+      ...form,
+      weddingDate,
+    }))
     router.push('/create/pin')
   }
 
