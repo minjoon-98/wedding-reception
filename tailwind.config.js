@@ -1,15 +1,11 @@
 /** @type {import('tailwindcss').Config} */
-export default {
+module.exports = {
   content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
+    "./app/**/*.{js,jsx}",
+    "./components/**/*.{js,jsx}",
   ],
   theme: {
     extend: {
-      fontFamily: {
-        sans: ['"Pretendard"', 'system-ui', 'sans-serif'],
-        display: ['"Noto Serif KR"', 'serif'],
-      },
       colors: {
         ivory: '#FFFEF9',
         parchment: '#FAF8F2',
@@ -39,7 +35,11 @@ export default {
           600: '#A72B2B',
         },
       },
+      fontFamily: {
+        sans: ['"Pretendard"', 'system-ui', 'sans-serif'],
+        display: ['"Noto Serif KR"', 'serif'],
+      },
     },
   },
   plugins: [],
-}
+};
