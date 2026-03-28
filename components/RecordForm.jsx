@@ -5,9 +5,10 @@ import { supabase } from '@/lib/supabase-browser'
 import { QUICK_AMOUNTS } from '@/lib/constants'
 import { formatAmountShort } from '@/lib/format'
 
-const SIDE_MAP = {
-  groom: '신랑측',
-  bride: '신부측',
+const SIDE_OPTIONS_BY_ROLE = {
+  groom: ['신랑측', '신랑 부모님'],
+  bride: ['신부측', '신부 부모님'],
+  all: ['신랑측', '신부측', '신랑 부모님', '신부 부모님', '기타', '미분류'],
 }
 
 export default function RecordForm({ weddingId, side, allGuests, onSubmitSuccess }) {
@@ -17,6 +18,9 @@ export default function RecordForm({ weddingId, side, allGuests, onSubmitSuccess
 
   const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
+  const [guestSide, setGuestSide] = useState(
+    side === 'groom' ? '신랑측' : side === 'bride' ? '신부측' : '미분류'
+  )
   const [showExtra, setShowExtra] = useState(false)
   const [relation, setRelation] = useState('')
   const [memo, setMemo] = useState('')
@@ -78,7 +82,6 @@ export default function RecordForm({ weddingId, side, allGuests, onSubmitSuccess
 
       setLoading(true)
       try {
-        const guestSide = SIDE_MAP[side] || '미분류'
         const { error } = await supabase.from('guests').insert({
           wedding_id: weddingId,
           name: trimmedName,
@@ -108,7 +111,7 @@ export default function RecordForm({ weddingId, side, allGuests, onSubmitSuccess
         setLoading(false)
       }
     },
-    [name, amount, relation, memo, side, weddingId, recorderName, onSubmitSuccess]
+    [name, amount, relation, memo, guestSide, weddingId, recorderName, onSubmitSuccess]
   )
 
   // Auto-dismiss toast
@@ -212,6 +215,29 @@ export default function RecordForm({ weddingId, side, allGuests, onSubmitSuccess
               {formatAmountShort(qa)}
             </button>
           ))}
+        </div>
+
+        {/* Side selection */}
+        <div>
+          <p className="text-xs text-gold-500 mb-2">구분</p>
+          <div className="flex flex-wrap gap-2">
+            {(SIDE_OPTIONS_BY_ROLE[side] || SIDE_OPTIONS_BY_ROLE.all).map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => setGuestSide(opt)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                  guestSide === opt
+                    ? opt.includes('신랑') ? 'bg-groom-600 text-white border-groom-600'
+                    : opt.includes('신부') ? 'bg-bride-600 text-white border-bride-600'
+                    : 'bg-gold-600 text-white border-gold-600'
+                    : 'bg-white text-gold-600 border-gold-200 hover:border-gold-400'
+                }`}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Extra fields toggle */}

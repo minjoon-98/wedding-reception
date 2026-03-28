@@ -26,10 +26,8 @@ export async function middleware(request) {
     return NextResponse.redirect(new URL(`/w/${weddingId}`, request.url))
   }
 
-  // Admin pages require admin role
-  if (section === 'admin' && payload.role !== 'admin') {
-    return NextResponse.redirect(new URL(`/w/${weddingId}`, request.url))
-  }
+  // Admin 페이지: recorder도 자기 측 관리 가능, 마스터는 전체 관리
+  // (측별 필터링은 AdminPanel 컴포넌트에서 처리)
 
   // Pass auth info via request headers
   const requestHeaders = new Headers(request.headers)

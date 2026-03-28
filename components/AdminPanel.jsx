@@ -7,7 +7,10 @@ import { getSideBadgeStyle } from '@/lib/constants'
 import { formatAmount, formatDateTime } from '@/lib/format'
 import StatsCards from '@/components/StatsCards'
 
-export default function AdminPanel({ weddingId }) {
+const GROOM_SIDES = ['신랑측', '신랑 부모님', '미분류']
+const BRIDE_SIDES = ['신부측', '신부 부모님', '미분류']
+
+export default function AdminPanel({ weddingId, side, role }) {
   const [guests, setGuests] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -90,9 +93,22 @@ export default function AdminPanel({ weddingId }) {
     }
   }, [weddingId])
 
+  // 측별 접근 시 해당 측 데이터만 표시
+  const sideFilteredGuests = useMemo(() => {
+    if (role === 'admin' || !side) return guests
+    const allowed = side === 'groom' ? GROOM_SIDES : BRIDE_SIDES
+    return guests.filter((g) => allowed.includes(g.side))
+  }, [guests, side, role])
+
+  // 측별 필터 옵션도 제한
+  const availableSideOptions = useMemo(() => {
+    if (role === 'admin' || !side) return SIDE_OPTIONS
+    return side === 'groom' ? ['신랑측', '신랑 부모님', '미분류'] : ['신부측', '신부 부모님', '미분류']
+  }, [side, role])
+
   // Filtered + sorted guests
   const filteredGuests = useMemo(() => {
-    let result = [...guests]
+    let result = [...sideFilteredGuests]
 
     if (filterSide !== '전체') {
       result = result.filter((g) => g.side === filterSide)
@@ -283,7 +299,7 @@ export default function AdminPanel({ weddingId }) {
   return (
     <div className="space-y-6">
       {/* Stats */}
-      <StatsCards guests={guests} />
+      <StatsCards guests={sideFilteredGuests} />
 
       {/* Toolbar */}
       <div className="space-y-3">
@@ -306,7 +322,7 @@ export default function AdminPanel({ weddingId }) {
             className="h-9 px-3 border border-gold-200 rounded-lg bg-white text-sm text-gold-700"
           >
             <option value="전체">전체</option>
-            {SIDE_OPTIONS.map((s) => (
+            {availableSideOptions.map((s) => (
               <option key={s} value={s}>
                 {s}
               </option>
@@ -354,7 +370,7 @@ export default function AdminPanel({ weddingId }) {
               onChange={(e) => setBulkSide(e.target.value)}
               className="h-8 px-2 border border-gold-200 rounded-lg bg-white text-sm"
             >
-              {SIDE_OPTIONS.map((s) => (
+              {availableSideOptions.map((s) => (
                 <option key={s} value={s}>
                   {s}
                 </option>
@@ -433,7 +449,7 @@ export default function AdminPanel({ weddingId }) {
                         }
                         className="h-8 px-2 border border-gold-200 rounded-lg text-sm bg-white"
                       >
-                        {SIDE_OPTIONS.map((s) => (
+                        {availableSideOptions.map((s) => (
                           <option key={s} value={s}>
                             {s}
                           </option>

@@ -142,7 +142,7 @@ export default function RecordPage({ params }) {
             {stats.count}명 · {formatAmount(stats.total)}원
           </p>
         </div>
-        <div className="text-right">
+        <div className="flex items-center gap-2">
           <span
             className={`text-xs px-2 py-1 rounded-full border ${
               side === 'bride'
@@ -152,6 +152,12 @@ export default function RecordPage({ params }) {
           >
             {side === 'bride' ? '신부측' : '신랑측'}
           </span>
+          <a
+            href={`/w/${id}/admin`}
+            className="text-xs px-2 py-1 rounded-full border border-gold-300 text-gold-600 hover:bg-gold-50 transition"
+          >
+            관리
+          </a>
         </div>
       </div>
 
