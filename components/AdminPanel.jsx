@@ -95,9 +95,10 @@ export default function AdminPanel({ weddingId, side, role }) {
 
   // 측별 접근 시 해당 측 데이터만 표시
   const sideFilteredGuests = useMemo(() => {
-    if (role === 'admin' || !side) return guests
-    const allowed = side === 'groom' ? GROOM_SIDES : BRIDE_SIDES
-    return guests.filter((g) => allowed.includes(g.side))
+    if (role === 'admin') return guests
+    if (side === 'groom') return guests.filter((g) => GROOM_SIDES.includes(g.side))
+    if (side === 'bride') return guests.filter((g) => BRIDE_SIDES.includes(g.side))
+    return [] // side 미확인 시 빈 배열 (보안)
   }, [guests, side, role])
 
   // 측별 필터 옵션도 제한

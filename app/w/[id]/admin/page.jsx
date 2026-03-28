@@ -52,7 +52,11 @@ export default function AdminPage({ params }) {
         </Link>
       </div>
 
-      <AdminPanel weddingId={id} side={auth?.side} role={auth?.role} />
+      {auth ? (
+        <AdminPanel weddingId={id} side={auth.side} role={auth.role} />
+      ) : (
+        <p className="text-gold-500 text-center animate-pulse py-12">불러오는 중...</p>
+      )}
     </main>
   )
 }
