@@ -34,6 +34,7 @@ export default function PinPage() {
   const router = useRouter()
   const [pins, setPins] = useState({ pinGroom: '', pinBride: '', pinMaster: '' })
   const [error, setError] = useState('')
+  const [duplicateId, setDuplicateId] = useState(null)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -117,6 +118,9 @@ export default function PinPage() {
         sessionStorage.removeItem('wedding_draft')
         sessionStorage.removeItem('wedding_confirmed')
         router.push('/create/done')
+      } else if (result.duplicate) {
+        setError(result.error)
+        setDuplicateId(result.existingId)
       } else {
         setError(result.error || '결혼식 생성에 실패했습니다.')
       }
@@ -166,7 +170,17 @@ export default function PinPage() {
           ))}
 
           {error && (
-            <p className="text-center text-sm text-bride-600">{error}</p>
+            <div className="text-center space-y-2">
+              <p className="text-sm text-bride-600">{error}</p>
+              {duplicateId && (
+                <a
+                  href={`/w/${duplicateId}`}
+                  className="inline-block text-sm text-groom-600 underline hover:text-groom-400"
+                >
+                  기존 결혼식으로 입장하기
+                </a>
+              )}
+            </div>
           )}
 
           <button

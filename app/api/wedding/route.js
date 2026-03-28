@@ -56,6 +56,26 @@ export async function POST(request) {
     )
   }
 
+  // 청첩장 URL 중복 검사
+  if (invitationUrl) {
+    const supabaseCheck = createSupabaseServer()
+    const { data: existing } = await supabaseCheck
+      .from('weddings')
+      .select('id, groom_name, bride_name')
+      .eq('invitation_url', invitationUrl)
+      .limit(1)
+      .single()
+
+    if (existing) {
+      return NextResponse.json({
+        success: false,
+        duplicate: true,
+        existingId: existing.id,
+        error: `이미 등록된 청첩장입니다. (${existing.groom_name} ♥ ${existing.bride_name})`,
+      }, { status: 409 })
+    }
+  }
+
   const id = nanoid(8)
 
   const [hashedGroom, hashedBride, hashedMaster] = await Promise.all([
