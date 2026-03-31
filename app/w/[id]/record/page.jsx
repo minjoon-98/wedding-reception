@@ -167,7 +167,11 @@ export default function RecordPage({ params }) {
           weddingId={id}
           side={side}
           allGuests={guests}
-          onSubmitSuccess={() => {}}
+          onSubmitSuccess={(newGuest) => {
+            if (newGuest) {
+              setGuests((prev) => prev.some((g) => g.id === newGuest.id) ? prev : [newGuest, ...prev])
+            }
+          }}
         />
       </div>
 

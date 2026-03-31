@@ -18,9 +18,7 @@ export default function RecordForm({ weddingId, side, allGuests, onSubmitSuccess
 
   const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
-  const [guestSide, setGuestSide] = useState(
-    side === 'groom' ? '신랑측' : side === 'bride' ? '신부측' : '미분류'
-  )
+  const [guestSide, setGuestSide] = useState('미분류')
   const [showExtra, setShowExtra] = useState(false)
   const [relation, setRelation] = useState('')
   const [memo, setMemo] = useState('')
@@ -82,7 +80,7 @@ export default function RecordForm({ weddingId, side, allGuests, onSubmitSuccess
 
       setLoading(true)
       try {
-        const { error } = await supabase.from('guests').insert({
+        const { data: inserted, error } = await supabase.from('guests').insert({
           wedding_id: weddingId,
           name: trimmedName,
           amount: amount ? parseInt(amount, 10) : 0,
@@ -90,19 +88,20 @@ export default function RecordForm({ weddingId, side, allGuests, onSubmitSuccess
           relation: relation.trim() || null,
           memo: memo.trim() || null,
           recorded_by: recorderName,
-        })
+        }).select().single()
 
         if (error) {
           setToast({ type: 'error', message: '저장에 실패했습니다.' })
         } else {
           setToast({ type: 'success', message: `${trimmedName}님 접수 완료!` })
+          onSubmitSuccess?.(inserted)
           setName('')
           setAmount('')
           setRelation('')
           setMemo('')
           setShowExtra(false)
           setDuplicateWarning(false)
-          onSubmitSuccess?.()
+          setGuestSide('미분류')
           nameRef.current?.focus()
         }
       } catch {
