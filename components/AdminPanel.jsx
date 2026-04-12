@@ -6,6 +6,7 @@ import { SIDE_OPTIONS } from '@/lib/constants'
 import { getSideBadgeStyle } from '@/lib/constants'
 import { formatAmount, formatDateTime } from '@/lib/format'
 import StatsCards from '@/components/StatsCards'
+import * as XLSX from 'xlsx'
 
 const GROOM_SIDES = ['신랑측', '신랑 부모님', '미분류']
 const BRIDE_SIDES = ['신부측', '신부 부모님', '미분류']
@@ -266,29 +267,32 @@ export default function AdminPanel({ weddingId, side, role }) {
     [role, side]
   )
 
-  // CSV export
+  // Excel export
   const handleExport = useCallback(() => {
-    const headers = ['이름', '금액', '구분', '관계', '메모', '접수자', '접수시간']
-    const rows = filteredGuests.map((g) => [
-      g.name || '',
-      g.amount || 0,
-      g.side || '',
-      g.relation || '',
-      g.memo || '',
-      g.recorded_by || '',
-      g.created_at || '',
-    ])
+    const data = filteredGuests.map((g) => ({
+      '이름': g.name || '',
+      '금액': g.amount || 0,
+      '구분': g.side || '',
+      '관계': g.relation || '',
+      '메모': g.memo || '',
+      '접수자': g.recorded_by || '',
+      '접수시간': g.created_at ? new Date(g.created_at).toLocaleString('ko-KR') : '',
+    }))
 
-    const bom = '\uFEFF'
-    const csv = bom + [headers, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `guests_${weddingId}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+    const ws = XLSX.utils.json_to_sheet(data)
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 10 }, // 이름
+      { wch: 12 }, // 금액
+      { wch: 10 }, // 구분
+      { wch: 14 }, // 관계
+      { wch: 16 }, // 메모
+      { wch: 10 }, // 접수자
+      { wch: 20 }, // 접수시간
+    ]
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, '축의금 목록')
+    XLSX.writeFile(wb, `축의금_${weddingId}.xlsx`)
   }, [filteredGuests, weddingId])
 
   // Clear selection when filter/search changes
@@ -375,7 +379,7 @@ export default function AdminPanel({ weddingId, side, role }) {
             onClick={handleExport}
             className="h-9 px-3 rounded-lg text-sm border border-gold-200 bg-white text-gold-700 hover:bg-gold-50 transition-colors ml-auto"
           >
-            CSV 내보내기
+            엑셀 내보내기
           </button>
         </div>
 
