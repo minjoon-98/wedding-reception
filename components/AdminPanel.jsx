@@ -267,11 +267,12 @@ export default function AdminPanel({ weddingId, side, role }) {
     [role, side]
   )
 
-  // Excel export
+  // Excel export with formulas
   const handleExport = useCallback(() => {
     const wb = XLSX.utils.book_new()
     const colWidths = [{ wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 10 }, { wch: 20 }]
     const amountFmt = '#,##0'
+    const D = '전체 목록' // data sheet name for formula references
 
     const toRow = (g) => ({
       '이름': g.name || '',
@@ -290,118 +291,107 @@ export default function AdminPanel({ weddingId, side, role }) {
       }
     }
 
-    // --- Sheet 1: 요약 ---
-    const totalAmount = filteredGuests.reduce((s, g) => s + (g.amount || 0), 0)
-    const totalCount = filteredGuests.length
-    const avgAmount = totalCount > 0 ? Math.round(totalAmount / totalCount) : 0
-
-    // 구분별 통계
-    const sideStats = {}
-    for (const g of filteredGuests) {
-      const s = g.side || '미분류'
-      if (!sideStats[s]) sideStats[s] = { count: 0, amount: 0 }
-      sideStats[s] = { count: sideStats[s].count + 1, amount: sideStats[s].amount + (g.amount || 0) }
-    }
-
-    // 금액대별 분포
-    const brackets = [
-      { label: '3만원', min: 30000, max: 30000 },
-      { label: '5만원', min: 50000, max: 50000 },
-      { label: '7만원', min: 70000, max: 70000 },
-      { label: '10만원', min: 100000, max: 100000 },
-      { label: '15만원', min: 150000, max: 150000 },
-      { label: '20만원', min: 200000, max: 200000 },
-      { label: '30만원', min: 300000, max: 300000 },
-      { label: '50만원 이상', min: 500000, max: Infinity },
-      { label: '기타', min: 0, max: 0 },
-    ]
-    const amountDist = {}
-    for (const g of filteredGuests) {
-      const amt = g.amount || 0
-      const bracket = brackets.find((b) => b.label !== '기타' && amt >= b.min && amt <= b.max)
-      const label = bracket ? bracket.label : '기타'
-      amountDist[label] = (amountDist[label] || 0) + 1
-    }
-
-    // 관계별 통계
-    const relationStats = {}
-    for (const g of filteredGuests) {
-      const r = g.relation || '미입력'
-      if (!relationStats[r]) relationStats[r] = { count: 0, amount: 0 }
-      relationStats[r] = { count: relationStats[r].count + 1, amount: relationStats[r].amount + (g.amount || 0) }
-    }
-
-    const summaryData = [
-      { '항목': '전체 합계', '값': totalAmount, '비고': `${totalCount}명` },
-      { '항목': '평균 금액', '값': avgAmount, '비고': '' },
-      { '항목': '', '값': '', '비고': '' },
-      { '항목': '[ 구분별 ]', '값': '', '비고': '' },
-      ...Object.entries(sideStats).map(([side, stat]) => ({
-        '항목': `  ${side}`, '값': stat.amount, '비고': `${stat.count}명 (평균 ${Math.round(stat.amount / stat.count).toLocaleString()}원)`,
-      })),
-      { '항목': '', '값': '', '비고': '' },
-      { '항목': '[ 금액대별 ]', '값': '', '비고': '' },
-      ...brackets.filter((b) => amountDist[b.label]).map((b) => ({
-        '항목': `  ${b.label}`, '값': '', '비고': `${amountDist[b.label]}명`,
-      })),
-      { '항목': '', '값': '', '비고': '' },
-      { '항목': '[ 관계별 ]', '값': '', '비고': '' },
-      ...Object.entries(relationStats)
-        .sort((a, b) => b[1].amount - a[1].amount)
-        .map(([rel, stat]) => ({
-          '항목': `  ${rel}`, '값': stat.amount, '비고': `${stat.count}명`,
-        })),
-    ]
-
-    const wsSummary = XLSX.utils.json_to_sheet(summaryData)
-    wsSummary['!cols'] = [{ wch: 16 }, { wch: 14 }, { wch: 24 }]
-    for (let i = 2; i <= summaryData.length + 1; i++) {
-      const cell = wsSummary[`B${i}`]
-      if (cell && typeof cell.v === 'number') cell.z = amountFmt
-    }
-    XLSX.utils.book_append_sheet(wb, wsSummary, '요약')
-
-    // --- Sheet 2: 전체 목록 ---
+    // --- Sheet 1: 전체 목록 (data source) ---
     const allRows = filteredGuests.map(toRow)
+    const n = allRows.length
     const wsAll = XLSX.utils.json_to_sheet(allRows)
     wsAll['!cols'] = colWidths
-    wsAll['!autofilter'] = { ref: `A1:G${allRows.length + 1}` }
-    wsAll['!freeze'] = { xSplit: 0, ySplit: 1 }
-    applyAmountFormat(wsAll, allRows.length)
+    wsAll['!autofilter'] = { ref: `A1:G${n + 1}` }
 
-    // Add totals at bottom
-    const totalRowIdx = allRows.length + 2
-    XLSX.utils.sheet_add_aoa(wsAll, [
-      ['합계', totalAmount, `${totalCount}명`, '', '', '평균', avgAmount],
-    ], { origin: `A${totalRowIdx}` })
-    const totalCell = wsAll[`B${totalRowIdx}`]
-    if (totalCell) totalCell.z = amountFmt
-    const avgCell = wsAll[`G${totalRowIdx}`]
-    if (avgCell) avgCell.z = amountFmt
+    applyAmountFormat(wsAll, n)
 
-    XLSX.utils.book_append_sheet(wb, wsAll, '전체 목록')
+    // Formula totals at bottom of data sheet
+    const tr = n + 2
+    wsAll[`A${tr}`] = { v: '합계' }
+    wsAll[`B${tr}`] = { f: `SUM(B2:B${n + 1})`, z: amountFmt }
+    wsAll[`C${tr}`] = { f: `COUNTA(A2:A${n + 1})&"명"` }
+    wsAll[`F${tr}`] = { v: '평균' }
+    wsAll[`G${tr}`] = { f: `IFERROR(AVERAGE(B2:B${n + 1}),0)`, z: amountFmt }
+    wsAll['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: tr - 1, c: 6 } })
+
+    XLSX.utils.book_append_sheet(wb, wsAll, D)
+
+    // --- Sheet 2: 요약 (formulas referencing data sheet) ---
+    const ref = (col) => `'${D}'!${col}2:${col}${n + 1}`
+    const sideOrder = ['신랑측', '신랑 부모님', '신부측', '신부 부모님', '기타', '미분류']
+    const amountBrackets = [30000, 50000, 70000, 100000, 150000, 200000, 300000, 500000]
+
+    const summaryRows = [
+      ['항목', '값', '비고'],
+      ['전체 합계', null, null],
+      ['전체 인원', null, null],
+      ['평균 금액', null, null],
+      [],
+      ['[ 구분별 ]', '금액', '인원'],
+    ]
+    // Side rows start at row 7
+    for (const side of sideOrder) {
+      summaryRows.push([`  ${side}`, null, null])
+    }
+    summaryRows.push([])
+    summaryRows.push(['[ 금액대별 ]', '금액', '인원'])
+    // Bracket rows
+    const bracketLabels = ['3만원', '5만원', '7만원', '10만원', '15만원', '20만원', '30만원', '50만원 이상']
+    for (const label of bracketLabels) {
+      summaryRows.push([`  ${label}`, null, null])
+    }
+    summaryRows.push([])
+    summaryRows.push(['[ 관계별 — 수동 확인 ]', '', ''])
+
+    const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows)
+    wsSummary['!cols'] = [{ wch: 18 }, { wch: 16 }, { wch: 16 }]
+
+    // Row 2: 전체 합계 formula
+    wsSummary['B2'] = { f: `SUM(${ref('B')})`, z: amountFmt }
+    wsSummary['C2'] = { f: `COUNTA(${ref('A')})&"명"` }
+    // Row 3: 전체 인원
+    wsSummary['B3'] = { f: `COUNTA(${ref('A')})` }
+    // Row 4: 평균
+    wsSummary['B4'] = { f: `IFERROR(AVERAGE(${ref('B')}),0)`, z: amountFmt }
+
+    // Row 7~12: 구분별 (SUMIF/COUNTIF)
+    sideOrder.forEach((side, i) => {
+      const row = 7 + i
+      wsSummary[`B${row}`] = { f: `SUMIF(${ref('C')},"${side}",${ref('B')})`, z: amountFmt }
+      wsSummary[`C${row}`] = { f: `COUNTIF(${ref('C')},"${side}")&"명"` }
+    })
+
+    // 금액대별 (COUNTIF)
+    const bracketStartRow = 7 + sideOrder.length + 2
+    amountBrackets.forEach((amt, i) => {
+      const row = bracketStartRow + i
+      if (i < amountBrackets.length - 1) {
+        // Exact match for standard amounts
+        wsSummary[`B${row}`] = { f: `COUNTIF(${ref('B')},${amt})*${amt}`, z: amountFmt }
+        wsSummary[`C${row}`] = { f: `COUNTIF(${ref('B')},${amt})&"명"` }
+      } else {
+        // 50만원 이상
+        wsSummary[`B${row}`] = { f: `SUMIFS(${ref('B')},${ref('B')},">=${amt}")`, z: amountFmt }
+        wsSummary[`C${row}`] = { f: `COUNTIF(${ref('B')},">=${amt}")&"명"` }
+      }
+    })
+
+    XLSX.utils.book_append_sheet(wb, wsSummary, '요약')
 
     // --- Sheet 3+: 구분별 시트 ---
-    const sideOrder = ['신랑측', '신랑 부모님', '신부측', '신부 부모님', '기타', '미분류']
     for (const sideName of sideOrder) {
       const sideGuests = filteredGuests.filter((g) => (g.side || '미분류') === sideName)
       if (sideGuests.length === 0) continue
 
       const sideRows = sideGuests.map(toRow)
+      const sn = sideRows.length
       const wsSide = XLSX.utils.json_to_sheet(sideRows)
       wsSide['!cols'] = colWidths
-      wsSide['!autofilter'] = { ref: `A1:G${sideRows.length + 1}` }
-      applyAmountFormat(wsSide, sideRows.length)
+      wsSide['!autofilter'] = { ref: `A1:G${sn + 1}` }
+      applyAmountFormat(wsSide, sn)
 
-      const sideTotal = sideGuests.reduce((s, g) => s + (g.amount || 0), 0)
-      const sideAvg = Math.round(sideTotal / sideGuests.length)
-      XLSX.utils.sheet_add_aoa(wsSide, [
-        ['합계', sideTotal, `${sideGuests.length}명`, '', '', '평균', sideAvg],
-      ], { origin: `A${sideRows.length + 2}` })
-      const stCell = wsSide[`B${sideRows.length + 2}`]
-      if (stCell) stCell.z = amountFmt
-      const saCell = wsSide[`G${sideRows.length + 2}`]
-      if (saCell) saCell.z = amountFmt
+      const str = sn + 2
+      wsSide[`A${str}`] = { v: '합계' }
+      wsSide[`B${str}`] = { f: `SUM(B2:B${sn + 1})`, z: amountFmt }
+      wsSide[`C${str}`] = { f: `COUNTA(A2:A${sn + 1})&"명"` }
+      wsSide[`F${str}`] = { v: '평균' }
+      wsSide[`G${str}`] = { f: `IFERROR(AVERAGE(B2:B${sn + 1}),0)`, z: amountFmt }
+      wsSide['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: str - 1, c: 6 } })
 
       XLSX.utils.book_append_sheet(wb, wsSide, sideName)
     }
