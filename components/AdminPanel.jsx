@@ -180,12 +180,14 @@ export default function AdminPanel({ weddingId, side, role }) {
       .update({ side: bulkSide })
       .in('id', ids)
 
-    if (!error) {
-      setGuests((prev) =>
-        prev.map((g) => (ids.includes(g.id) ? { ...g, side: bulkSide } : g))
-      )
-      setSelectedIds(new Set())
+    if (error) {
+      alert('분류 변경에 실패했습니다.')
+      return
     }
+    setGuests((prev) =>
+      prev.map((g) => (ids.includes(g.id) ? { ...g, side: bulkSide } : g))
+    )
+    setSelectedIds(new Set())
   }, [selectedIds, bulkSide])
 
   // Inline edit
@@ -221,13 +223,15 @@ export default function AdminPanel({ weddingId, side, role }) {
       .update(updates)
       .eq('id', editingId)
 
-    if (!error) {
-      setGuests((prev) =>
-        prev.map((g) => (g.id === editingId ? { ...g, ...updates } : g))
-      )
-      setEditingId(null)
-      setEditData({})
+    if (error) {
+      alert('수정에 실패했습니다.')
+      return
     }
+    setGuests((prev) =>
+      prev.map((g) => (g.id === editingId ? { ...g, ...updates } : g))
+    )
+    setEditingId(null)
+    setEditData({})
   }, [editingId, editData])
 
   // Delete

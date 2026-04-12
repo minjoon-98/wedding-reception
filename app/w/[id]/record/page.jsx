@@ -112,14 +112,17 @@ export default function RecordPage({ params }) {
     }
   }, [id])
 
-  // Determine side for current user
-  const side = auth?.side === '신부측' ? 'bride' : 'groom'
+  // Determine side for current user (auth API returns Korean side values)
+  const isAdmin = auth?.role === 'admin'
+  const side = isAdmin ? 'all'
+    : auth?.side === '신부측' ? 'bride'
+    : 'groom'
   const sideFilter = side === 'bride' ? BRIDE_SIDES : GROOM_SIDES
 
-  // Filter guests by side
+  // Filter guests by side (admin sees all)
   const myGuests = useMemo(
-    () => guests.filter((g) => sideFilter.includes(g.side)),
-    [guests, sideFilter]
+    () => isAdmin ? guests : guests.filter((g) => sideFilter.includes(g.side)),
+    [guests, isAdmin, sideFilter]
   )
 
   // Stats
@@ -152,10 +155,12 @@ export default function RecordPage({ params }) {
             className={`text-xs px-2 py-1 rounded-full border ${
               side === 'bride'
                 ? 'bg-bride-100 text-bride-600 border-bride-200'
+                : side === 'all'
+                ? 'bg-gold-100 text-gold-600 border-gold-200'
                 : 'bg-groom-100 text-groom-600 border-groom-200'
             }`}
           >
-            {side === 'bride' ? '신부측' : '신랑측'}
+            {side === 'bride' ? '신부측' : side === 'all' ? '전체' : '신랑측'}
           </span>
           <a
             href={`/w/${id}/admin`}
