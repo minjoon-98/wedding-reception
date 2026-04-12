@@ -173,6 +173,7 @@ export default function AdminPanel({ weddingId, side, role }) {
       .from('guests')
       .update({ side: bulkSide })
       .in('id', ids)
+      .is('deleted_at', null)
 
     if (error) {
       alert('분류 변경에 실패했습니다.')
@@ -220,6 +221,7 @@ export default function AdminPanel({ weddingId, side, role }) {
       .from('guests')
       .update(updates)
       .eq('id', editingId)
+      .is('deleted_at', null)
 
     if (error) {
       alert('수정에 실패했습니다.')

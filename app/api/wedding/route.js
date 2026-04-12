@@ -156,7 +156,7 @@ export async function GET(request) {
     const { data: results, error } = await supabase
       .from('weddings')
       .select('id, groom_name, bride_name, wedding_date, venue_name, invitation_url')
-      .or(`groom_name.ilike.%${trimmed}%,bride_name.ilike.%${trimmed}%,venue_name.ilike.%${trimmed}%`)
+      .or(`groom_name.ilike.%${trimmed.replace(/[,%()]/g, '')}%,bride_name.ilike.%${trimmed.replace(/[,%()]/g, '')}%,venue_name.ilike.%${trimmed.replace(/[,%()]/g, '')}%`)
       .order('created_at', { ascending: false })
       .limit(10)
 

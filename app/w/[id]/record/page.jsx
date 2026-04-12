@@ -111,12 +111,10 @@ export default function RecordPage({ params }) {
   const side = isAdmin ? 'all'
     : auth?.side === '신부측' ? 'bride'
     : 'groom'
-  const sideFilter = side === 'bride' ? BRIDE_SIDES : GROOM_SIDES
-
   // Filter guests by side (admin sees all)
   const myGuests = useMemo(
-    () => isAdmin ? guests : guests.filter((g) => sideFilter.includes(g.side)),
-    [guests, isAdmin, sideFilter]
+    () => isAdmin ? guests : guests.filter((g) => (side === 'bride' ? BRIDE_SIDES : GROOM_SIDES).includes(g.side)),
+    [guests, isAdmin, side]
   )
 
   // Stats
