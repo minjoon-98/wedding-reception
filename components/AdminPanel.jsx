@@ -392,7 +392,7 @@ export default function AdminPanel({ weddingId, side, role }) {
       </div>
 
       {/* Guest table */}
-      <div className="bg-white rounded-xl border border-gold-200 overflow-hidden">
+      <div className="bg-white rounded-xl border border-gold-200 overflow-x-auto">
         {/* Table header */}
         <div className="flex items-center gap-2 px-4 py-2 bg-gold-50 border-b border-gold-200 text-xs text-gold-500 font-medium">
           <input
@@ -403,7 +403,7 @@ export default function AdminPanel({ weddingId, side, role }) {
           />
           <span className="w-20 lg:w-28 shrink-0">이름</span>
           <span className="w-20 lg:w-28 shrink-0 text-right">금액</span>
-          <span className="w-16 lg:w-20 shrink-0 text-center">구분</span>
+          <span className="w-20 lg:w-24 shrink-0 text-center">구분</span>
           <span className="flex-1 hidden sm:block">관계/메모</span>
           <span className="w-20 shrink-0 hidden lg:block">접수자</span>
           <span className="w-24 shrink-0 text-right hidden sm:block">시간</span>
@@ -510,7 +510,7 @@ export default function AdminPanel({ weddingId, side, role }) {
                     <span className="w-20 lg:w-28 shrink-0 text-right text-gold-700">
                       {formatAmount(guest.amount)}
                     </span>
-                    <span className="w-16 lg:w-20 shrink-0 text-center">
+                    <span className="w-20 lg:w-24 shrink-0 text-center">
                       <span
                         className={`text-xs px-1.5 py-0.5 rounded-full border ${getSideBadgeStyle(guest.side)}`}
                       >
