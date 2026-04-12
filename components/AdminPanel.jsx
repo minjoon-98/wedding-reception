@@ -30,6 +30,7 @@ export default function AdminPanel({ weddingId, side, role }) {
         .from('guests')
         .select('*')
         .eq('wedding_id', weddingId)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
 
       if (!error && data) {
@@ -68,21 +69,14 @@ export default function AdminPanel({ weddingId, side, role }) {
           filter: `wedding_id=eq.${weddingId}`,
         },
         (payload) => {
+          // Soft deleted — remove from list
+          if (payload.new.deleted_at) {
+            setGuests((prev) => prev.filter((g) => g.id !== payload.new.id))
+            return
+          }
           setGuests((prev) =>
             prev.map((g) => (g.id === payload.new.id ? payload.new : g))
           )
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'guests',
-          filter: `wedding_id=eq.${weddingId}`,
-        },
-        (payload) => {
-          setGuests((prev) => prev.filter((g) => g.id !== payload.old.id))
         }
       )
       .subscribe()
@@ -238,26 +232,36 @@ export default function AdminPanel({ weddingId, side, role }) {
     setEditData({})
   }, [editingId, editData])
 
-  // Delete
+  // Soft delete
   const handleDelete = useCallback(
     async (id) => {
       if (!confirm('정말 삭제하시겠습니까?')) return
 
+      const deletedBy = role === 'admin' ? '관리자'
+        : side === 'groom' ? '신랑측'
+        : side === 'bride' ? '신부측'
+        : '접수자'
+
       const { error } = await supabase
         .from('guests')
-        .delete()
+        .update({
+          deleted_at: new Date().toISOString(),
+          deleted_by: deletedBy,
+        })
         .eq('id', id)
 
-      if (!error) {
-        setGuests((prev) => prev.filter((g) => g.id !== id))
-        setSelectedIds((prev) => {
-          const next = new Set(prev)
-          next.delete(id)
-          return next
-        })
+      if (error) {
+        alert('삭제에 실패했습니다.')
+        return
       }
+      setGuests((prev) => prev.filter((g) => g.id !== id))
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
     },
-    []
+    [role, side]
   )
 
   // CSV export

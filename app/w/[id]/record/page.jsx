@@ -41,6 +41,7 @@ export default function RecordPage({ params }) {
         .from('guests')
         .select('*')
         .eq('wedding_id', id)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
 
       if (!error && data) {
@@ -87,21 +88,14 @@ export default function RecordPage({ params }) {
           filter: `wedding_id=eq.${id}`,
         },
         (payload) => {
+          // Soft deleted — remove from list
+          if (payload.new.deleted_at) {
+            setGuests((prev) => prev.filter((g) => g.id !== payload.new.id))
+            return
+          }
           setGuests((prev) =>
             prev.map((g) => (g.id === payload.new.id ? payload.new : g))
           )
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'guests',
-          filter: `wedding_id=eq.${id}`,
-        },
-        (payload) => {
-          setGuests((prev) => prev.filter((g) => g.id !== payload.old.id))
         }
       )
       .subscribe()
