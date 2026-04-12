@@ -36,9 +36,9 @@ export default function StatsCards({ guests }) {
   const sideEntries = Object.entries(stats.bySide)
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
       {/* Total card */}
-      <div className="col-span-2 sm:col-span-3 rounded-xl border-2 border-gold-200 bg-gold-50 p-4 text-center">
+      <div className="col-span-2 sm:col-span-3 lg:col-span-4 rounded-xl border-2 border-gold-200 bg-gold-50 p-4 text-center">
         <p className="text-sm text-gold-500">전체</p>
         <p className="text-2xl font-bold text-gold-700">
           {formatAmount(stats.totalAmount)}원

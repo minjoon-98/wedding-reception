@@ -11,7 +11,7 @@ const SIDE_OPTIONS_BY_ROLE = {
   all: ['신랑측', '신부측', '신랑 부모님', '신부 부모님', '기타', '미분류'],
 }
 
-export default function RecordForm({ weddingId, side, allGuests, onSubmitSuccess }) {
+export default function RecordForm({ weddingId, side, allGuests, onSubmitSuccess, onSubmitError, onSubmitReplace }) {
   const [recorderName, setRecorderName] = useState('')
   const [recorderInput, setRecorderInput] = useState('')
   const [isSetup, setIsSetup] = useState(false)
@@ -22,7 +22,6 @@ export default function RecordForm({ weddingId, side, allGuests, onSubmitSuccess
   const [showExtra, setShowExtra] = useState(false)
   const [relation, setRelation] = useState('')
   const [memo, setMemo] = useState('')
-  const [loading, setLoading] = useState(false)
   const [toast, setToast] = useState(null)
   const [duplicateWarning, setDuplicateWarning] = useState(false)
 
@@ -78,39 +77,64 @@ export default function RecordForm({ weddingId, side, allGuests, onSubmitSuccess
       const trimmedName = name.trim()
       if (!trimmedName) return
 
-      setLoading(true)
+      // Capture current form values before clearing
+      const parsedAmount = amount ? parseInt(amount, 10) : 0
+      const trimmedRelation = relation.trim() || null
+      const trimmedMemo = memo.trim() || null
+      const currentSide = guestSide
+
+      // Build optimistic guest and add to UI immediately
+      const tempId = crypto.randomUUID()
+      const optimisticGuest = {
+        id: tempId,
+        wedding_id: weddingId,
+        name: trimmedName,
+        amount: parsedAmount,
+        side: currentSide,
+        relation: trimmedRelation,
+        memo: trimmedMemo,
+        recorded_by: recorderName,
+        created_at: new Date().toISOString(),
+        _optimistic: true,
+      }
+
+      onSubmitSuccess?.(optimisticGuest)
+      setToast({ type: 'success', message: `${trimmedName}님 접수 완료!` })
+
+      // Clear form immediately so user can enter next guest
+      setName('')
+      setAmount('')
+      setRelation('')
+      setMemo('')
+      setShowExtra(false)
+      setDuplicateWarning(false)
+      setGuestSide('미분류')
+      nameRef.current?.focus()
+
+      // Background: save to server
       try {
         const { data: inserted, error } = await supabase.from('guests').insert({
           wedding_id: weddingId,
           name: trimmedName,
-          amount: amount ? parseInt(amount, 10) : 0,
-          side: guestSide,
-          relation: relation.trim() || null,
-          memo: memo.trim() || null,
+          amount: parsedAmount,
+          side: currentSide,
+          relation: trimmedRelation,
+          memo: trimmedMemo,
           recorded_by: recorderName,
         }).select().single()
 
         if (error) {
-          setToast({ type: 'error', message: '저장에 실패했습니다.' })
-        } else {
-          setToast({ type: 'success', message: `${trimmedName}님 접수 완료!` })
-          onSubmitSuccess?.(inserted)
-          setName('')
-          setAmount('')
-          setRelation('')
-          setMemo('')
-          setShowExtra(false)
-          setDuplicateWarning(false)
-          setGuestSide('미분류')
-          nameRef.current?.focus()
+          onSubmitError?.(tempId)
+          setToast({ type: 'error', message: '저장 실패! 다시 시도해주세요.' })
+        } else if (inserted) {
+          onSubmitReplace?.(tempId, inserted)
         }
       } catch {
+        onSubmitError?.(tempId)
         setToast({ type: 'error', message: '네트워크 오류가 발생했습니다.' })
-      } finally {
-        setLoading(false)
       }
     },
-    [name, amount, relation, memo, guestSide, weddingId, recorderName, onSubmitSuccess]
+    [name, amount, relation, memo, guestSide, weddingId, recorderName, onSubmitSuccess, onSubmitError, onSubmitReplace]
   )
 
   // Auto-dismiss toast
@@ -158,8 +182,8 @@ export default function RecordForm({ weddingId, side, allGuests, onSubmitSuccess
       {toast && (
         <div
           className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-xl shadow-lg
-            text-white text-sm font-medium animate-bounce
-            ${toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}
+            text-white text-sm font-medium transition-all
+            ${toast.type === 'success' ? 'bg-green-500' : 'bg-red-500 animate-bounce'}`}
         >
           {toast.message}
         </div>
@@ -174,6 +198,8 @@ export default function RecordForm({ weddingId, side, allGuests, onSubmitSuccess
             value={name}
             onChange={handleNameChange}
             placeholder="이름"
+            aria-label="하객 이름"
+            autoComplete="name"
             autoFocus
             className="w-full h-12 px-4 border-2 border-gold-200 rounded-xl bg-white
               focus:border-gold-600 focus:ring-2 focus:ring-gold-100
@@ -193,6 +219,7 @@ export default function RecordForm({ weddingId, side, allGuests, onSubmitSuccess
           value={amount}
           onChange={handleAmountChange}
           placeholder="금액 (원)"
+          aria-label="축의금 금액"
           className="w-full h-12 px-4 border-2 border-gold-200 rounded-xl bg-white
             focus:border-gold-600 focus:ring-2 focus:ring-gold-100
             outline-none transition-all"
@@ -205,7 +232,7 @@ export default function RecordForm({ weddingId, side, allGuests, onSubmitSuccess
               key={qa}
               type="button"
               onClick={() => handleQuickAmount(qa)}
-              className={`h-10 rounded-lg text-sm font-medium transition-colors
+              className={`h-12 rounded-lg text-sm font-medium transition-colors
                 ${String(qa) === amount
                   ? 'bg-gold-600 text-white'
                   : 'bg-gold-50 text-gold-700 hover:bg-gold-100 border border-gold-200'
@@ -274,12 +301,12 @@ export default function RecordForm({ weddingId, side, allGuests, onSubmitSuccess
         {/* Submit */}
         <button
           type="submit"
-          disabled={!name.trim() || loading}
+          disabled={!name.trim()}
           className="w-full h-12 rounded-xl font-medium text-white
             bg-gold-600 hover:bg-gold-700 active:bg-gold-800
             disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
-          {loading ? '저장 중...' : '접수하기'}
+          접수하기
         </button>
       </form>
     </div>

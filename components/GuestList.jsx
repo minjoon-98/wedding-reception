@@ -17,9 +17,11 @@ export default function GuestList({ guests }) {
       {guests.map((guest) => (
         <div
           key={guest.id}
-          className="flex items-center justify-between py-3 px-4"
+          className={`flex items-center justify-between py-3 px-4 ${
+            guest._optimistic ? 'bg-gold-50/50 animate-pulse' : ''
+          }`}
         >
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             <span className="font-medium text-gold-800 truncate">
               {guest.name}
             </span>
@@ -30,6 +32,11 @@ export default function GuestList({ guests }) {
             >
               {guest.side}
             </span>
+            {(guest.relation || guest.memo) && (
+              <span className="text-xs text-gold-400 truncate hidden lg:inline">
+                {[guest.relation, guest.memo].filter(Boolean).join(' · ')}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-3 shrink-0">
             <span className="font-medium text-gold-700">

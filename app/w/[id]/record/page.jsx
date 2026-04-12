@@ -65,7 +65,15 @@ export default function RecordPage({ params }) {
         },
         (payload) => {
           setGuests((prev) => {
+            // Already have this guest by real ID
             if (prev.some((g) => g.id === payload.new.id)) return prev
+            // Replace optimistic entry if one matches
+            const idx = prev.findIndex(
+              (g) => g._optimistic && g.name === payload.new.name && g.amount === payload.new.amount
+            )
+            if (idx >= 0) {
+              return prev.map((g, i) => (i === idx ? payload.new : g))
+            }
             return [payload.new, ...prev]
           })
         }
@@ -121,9 +129,6 @@ export default function RecordPage({ params }) {
     return { count, total }
   }, [myGuests])
 
-  // Last 10 for display
-  const recentGuests = useMemo(() => myGuests.slice(0, 10), [myGuests])
-
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center">
@@ -133,12 +138,12 @@ export default function RecordPage({ params }) {
   }
 
   return (
-    <main className="min-h-screen max-w-lg mx-auto px-4 py-6 space-y-6">
+    <main className="min-h-screen mx-auto px-4 py-6 max-w-lg lg:max-w-5xl">
       {/* Stats header */}
       <div className="flex justify-between items-center p-4 rounded-xl bg-gold-50 border border-gold-200">
         <div>
           <p className="text-sm text-gold-500">접수 현황</p>
-          <p className="text-xl font-bold text-gold-700">
+          <p className="text-xl lg:text-2xl font-bold text-gold-700">
             {stats.count}명 · {formatAmount(stats.total)}원
           </p>
         </div>
@@ -154,33 +159,51 @@ export default function RecordPage({ params }) {
           </span>
           <a
             href={`/w/${id}/admin`}
-            className="text-xs px-2 py-1 rounded-full border border-gold-300 text-gold-600 hover:bg-gold-50 transition"
+            className="text-sm px-4 py-2 rounded-full border border-gold-300 text-gold-600 hover:bg-gold-50 transition"
           >
             관리
           </a>
         </div>
       </div>
 
-      {/* Record form */}
-      <div className="bg-white rounded-xl border border-gold-200 shadow-sm">
-        <RecordForm
-          weddingId={id}
-          side={side}
-          allGuests={guests}
-          onSubmitSuccess={(newGuest) => {
-            if (newGuest) {
-              setGuests((prev) => prev.some((g) => g.id === newGuest.id) ? prev : [newGuest, ...prev])
-            }
-          }}
-        />
-      </div>
-
-      {/* Recent guests */}
-      <div className="bg-white rounded-xl border border-gold-200 shadow-sm">
-        <div className="px-4 py-3 border-b border-gold-100">
-          <h3 className="text-sm font-medium text-gold-600">최근 접수</h3>
+      {/* Main content - responsive 2-column on desktop */}
+      <div className="mt-6 lg:grid lg:grid-cols-2 lg:gap-6 space-y-6 lg:space-y-0">
+        {/* Record form */}
+        <div className="bg-white rounded-xl border border-gold-200 shadow-sm">
+          <RecordForm
+            weddingId={id}
+            side={side}
+            allGuests={guests}
+            onSubmitSuccess={(guest) => {
+              setGuests((prev) => [guest, ...prev])
+            }}
+            onSubmitError={(tempId) => {
+              setGuests((prev) => prev.filter((g) => g.id !== tempId))
+            }}
+            onSubmitReplace={(tempId, realGuest) => {
+              setGuests((prev) => {
+                // Realtime already added the real guest — just remove temp
+                if (prev.some((g) => g.id === realGuest.id)) {
+                  return prev.filter((g) => g.id !== tempId)
+                }
+                // Replace temp with real data
+                return prev.map((g) => (g.id === tempId ? realGuest : g))
+              })
+            }}
+          />
         </div>
-        <GuestList guests={recentGuests} />
+
+        {/* Recent guests */}
+        <div className="bg-white rounded-xl border border-gold-200 shadow-sm flex flex-col max-h-96 lg:max-h-[calc(100vh-12rem)]">
+          <div className="px-4 py-3 border-b border-gold-100 shrink-0">
+            <h3 className="text-sm font-medium text-gold-600">
+              최근 접수 <span className="text-gold-400">({myGuests.length})</span>
+            </h3>
+          </div>
+          <div className="overflow-y-auto flex-1">
+            <GuestList guests={myGuests} />
+          </div>
+        </div>
       </div>
     </main>
   )

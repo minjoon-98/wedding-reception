@@ -146,7 +146,7 @@ export default function AdminPanel({ weddingId, side, role }) {
     })
 
     return result
-  }, [guests, filterSide, search, sortKey, sortAsc])
+  }, [sideFilteredGuests, filterSide, search, sortKey, sortAsc])
 
   // Toggle selection
   const toggleSelect = useCallback((id) => {
@@ -397,10 +397,11 @@ export default function AdminPanel({ weddingId, side, role }) {
             onChange={toggleSelectAll}
             className="shrink-0"
           />
-          <span className="w-20 shrink-0">이름</span>
-          <span className="w-20 shrink-0 text-right">금액</span>
-          <span className="w-16 shrink-0 text-center">구분</span>
+          <span className="w-20 lg:w-28 shrink-0">이름</span>
+          <span className="w-20 lg:w-28 shrink-0 text-right">금액</span>
+          <span className="w-16 lg:w-20 shrink-0 text-center">구분</span>
           <span className="flex-1 hidden sm:block">관계/메모</span>
+          <span className="w-20 shrink-0 hidden lg:block">접수자</span>
           <span className="w-24 shrink-0 text-right hidden sm:block">시간</span>
           <span className="w-16 shrink-0 text-right">작업</span>
         </div>
@@ -499,13 +500,13 @@ export default function AdminPanel({ weddingId, side, role }) {
                       onChange={() => toggleSelect(guest.id)}
                       className="shrink-0"
                     />
-                    <span className="w-20 shrink-0 font-medium text-gold-800 truncate">
+                    <span className="w-20 lg:w-28 shrink-0 font-medium text-gold-800 truncate">
                       {guest.name}
                     </span>
-                    <span className="w-20 shrink-0 text-right text-gold-700">
+                    <span className="w-20 lg:w-28 shrink-0 text-right text-gold-700">
                       {formatAmount(guest.amount)}
                     </span>
-                    <span className="w-16 shrink-0 text-center">
+                    <span className="w-16 lg:w-20 shrink-0 text-center">
                       <span
                         className={`text-xs px-1.5 py-0.5 rounded-full border ${getSideBadgeStyle(guest.side)}`}
                       >
@@ -514,6 +515,9 @@ export default function AdminPanel({ weddingId, side, role }) {
                     </span>
                     <span className="flex-1 text-xs text-gold-400 truncate hidden sm:block">
                       {[guest.relation, guest.memo].filter(Boolean).join(' / ')}
+                    </span>
+                    <span className="w-20 shrink-0 text-xs text-gold-400 truncate hidden lg:block">
+                      {guest.recorded_by}
                     </span>
                     <span className="w-24 shrink-0 text-right text-xs text-gold-400 hidden sm:block">
                       {formatDateTime(guest.created_at)}
