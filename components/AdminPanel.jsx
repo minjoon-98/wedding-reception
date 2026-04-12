@@ -209,6 +209,10 @@ export default function AdminPanel({ weddingId, side, role }) {
 
   const saveEdit = useCallback(async () => {
     if (!editingId) return
+    if (!editData.name.trim()) {
+      alert('이름을 입력해주세요.')
+      return
+    }
 
     const updates = {
       name: editData.name.trim(),
@@ -280,6 +284,11 @@ export default function AdminPanel({ weddingId, side, role }) {
     a.click()
     URL.revokeObjectURL(url)
   }, [filteredGuests, weddingId])
+
+  // Clear selection when filter/search changes
+  useEffect(() => {
+    setSelectedIds(new Set())
+  }, [filterSide, search])
 
   const handleSort = useCallback(
     (key) => {

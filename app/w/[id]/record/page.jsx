@@ -69,7 +69,7 @@ export default function RecordPage({ params }) {
             if (prev.some((g) => g.id === payload.new.id)) return prev
             // Replace optimistic entry if one matches
             const idx = prev.findIndex(
-              (g) => g._optimistic && g.name === payload.new.name && g.amount === payload.new.amount
+              (g) => g._optimistic && g.name === payload.new.name && g.amount === payload.new.amount && g.recorded_by === payload.new.recorded_by
             )
             if (idx >= 0) {
               return prev.map((g, i) => (i === idx ? payload.new : g))
@@ -178,7 +178,7 @@ export default function RecordPage({ params }) {
           <RecordForm
             weddingId={id}
             side={side}
-            allGuests={guests}
+            allGuests={myGuests}
             onSubmitSuccess={(guest) => {
               setGuests((prev) => [guest, ...prev])
             }}

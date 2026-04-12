@@ -7,8 +7,8 @@ const SIDE_LABELS = {
   '전체': 'bg-gold-50 border-gold-200 text-gold-700',
   '신랑측': 'bg-groom-50 border-groom-200 text-groom-600',
   '신부측': 'bg-bride-50 border-bride-200 text-bride-600',
-  '신랑 부모님': 'bg-groom-50 border-groom-200 text-groom-600',
-  '신부 부모님': 'bg-bride-50 border-bride-200 text-bride-600',
+  '신랑 부모님': 'bg-groom-200 border-groom-400 text-groom-600',
+  '신부 부모님': 'bg-bride-200 border-bride-400 text-bride-600',
   '기타': 'bg-gold-50 border-gold-200 text-gold-500',
   '미분류': 'bg-gold-50 border-gold-200 text-gold-400',
 }
