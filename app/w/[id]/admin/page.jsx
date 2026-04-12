@@ -22,8 +22,13 @@ export default function AdminPage({ params }) {
     fetchAuth()
   }, [id])
 
-  const sideLabel = auth?.side === 'groom' ? '신랑측'
-    : auth?.side === 'bride' ? '신부측'
+  // Auth API returns Korean side ('신랑측'/'신부측') — convert to English for AdminPanel
+  const normalizedSide = auth?.side === '신부측' ? 'bride'
+    : auth?.side === '신랑측' ? 'groom'
+    : auth?.side // 'groom'/'bride' or null for admin
+
+  const sideLabel = normalizedSide === 'groom' ? '신랑측'
+    : normalizedSide === 'bride' ? '신부측'
     : auth?.role === 'admin' ? '전체'
     : ''
 
@@ -36,8 +41,8 @@ export default function AdminPage({ params }) {
           </h1>
           {sideLabel && (
             <span className={`text-xs px-2 py-1 rounded-full border ${
-              auth?.side === 'groom' ? 'bg-groom-100 text-groom-600 border-groom-200'
-              : auth?.side === 'bride' ? 'bg-bride-100 text-bride-600 border-bride-200'
+              normalizedSide === 'groom' ? 'bg-groom-100 text-groom-600 border-groom-200'
+              : normalizedSide === 'bride' ? 'bg-bride-100 text-bride-600 border-bride-200'
               : 'bg-gold-100 text-gold-600 border-gold-200'
             }`}>
               {sideLabel}
@@ -53,7 +58,7 @@ export default function AdminPage({ params }) {
       </div>
 
       {auth ? (
-        <AdminPanel weddingId={id} side={auth.side} role={auth.role} />
+        <AdminPanel weddingId={id} side={normalizedSide} role={auth.role} />
       ) : (
         <p className="text-gold-500 text-center animate-pulse py-12">불러오는 중...</p>
       )}
