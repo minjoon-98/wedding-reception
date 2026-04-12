@@ -269,7 +269,7 @@ export default function AdminPanel({ weddingId, side, role }) {
 
   // Excel export
   const handleExport = useCallback(() => {
-    const data = filteredGuests.map((g) => ({
+    const rows = filteredGuests.map((g) => ({
       '이름': g.name || '',
       '금액': g.amount || 0,
       '구분': g.side || '',
@@ -279,17 +279,39 @@ export default function AdminPanel({ weddingId, side, role }) {
       '접수시간': g.created_at ? new Date(g.created_at).toLocaleString('ko-KR') : '',
     }))
 
-    const ws = XLSX.utils.json_to_sheet(data)
-    // Set column widths
-    ws['!cols'] = [
-      { wch: 10 }, // 이름
-      { wch: 12 }, // 금액
-      { wch: 10 }, // 구분
-      { wch: 14 }, // 관계
-      { wch: 16 }, // 메모
-      { wch: 10 }, // 접수자
-      { wch: 20 }, // 접수시간
+    // Per-side subtotals
+    const sideStats = {}
+    for (const g of filteredGuests) {
+      const s = g.side || '미분류'
+      if (!sideStats[s]) sideStats[s] = { count: 0, amount: 0 }
+      sideStats[s] = { count: sideStats[s].count + 1, amount: sideStats[s].amount + (g.amount || 0) }
+    }
+
+    // Add blank row + summary rows
+    const dataLen = rows.length
+    const summaryRows = [
+      { '이름': '', '금액': '', '구분': '', '관계': '', '메모': '', '접수자': '', '접수시간': '' },
+      { '이름': '[ 합계 ]', '금액': filteredGuests.reduce((s, g) => s + (g.amount || 0), 0), '구분': `${dataLen}명`, '관계': '', '메모': '', '접수자': '', '접수시간': '' },
+      ...Object.entries(sideStats).map(([side, stat]) => ({
+        '이름': `  ${side}`, '금액': stat.amount, '구분': `${stat.count}명`, '관계': '', '메모': '', '접수자': '', '접수시간': '',
+      })),
     ]
+
+    const ws = XLSX.utils.json_to_sheet([...rows, ...summaryRows])
+
+    // Column widths
+    ws['!cols'] = [
+      { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 10 }, { wch: 20 },
+    ]
+
+    // Number format for amount column (B) — #,##0 (thousand separator)
+    for (let i = 1; i <= dataLen + summaryRows.length; i++) {
+      const cell = ws[`B${i + 1}`]
+      if (cell && typeof cell.v === 'number') {
+        cell.z = '#,##0'
+      }
+    }
+
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, '축의금 목록')
     XLSX.writeFile(wb, `축의금_${weddingId}.xlsx`)
