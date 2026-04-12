@@ -530,7 +530,7 @@ export default function AdminPanel({ weddingId, side, role }) {
           <span className="flex-1 hidden sm:block">관계/메모</span>
           <span className="w-20 shrink-0 hidden lg:block">접수자</span>
           <span className="w-24 shrink-0 text-right hidden sm:block">시간</span>
-          <span className="w-16 shrink-0 text-right">작업</span>
+          <span className="w-24 shrink-0 text-right">작업</span>
         </div>
 
         {filteredGuests.length === 0 ? (
@@ -649,20 +649,20 @@ export default function AdminPanel({ weddingId, side, role }) {
                     <span className="w-24 shrink-0 text-right text-xs text-gold-400 hidden sm:block">
                       {formatDateTime(guest.created_at)}
                     </span>
-                    <span className="w-16 shrink-0 flex justify-end gap-1">
+                    <span className="w-24 shrink-0 flex justify-end gap-1.5">
                       <button
                         onClick={() => startEdit(guest)}
-                        className="text-xs text-gold-500 hover:text-gold-700"
-                        title="수정"
+                        className="h-7 px-2 rounded text-xs border border-gold-200 text-gold-600 hover:bg-gold-50"
+                        aria-label={`${guest.name} 수정`}
                       >
-                        ✏️
+                        수정
                       </button>
                       <button
                         onClick={() => handleDelete(guest.id)}
-                        className="text-xs text-red-400 hover:text-red-600"
-                        title="삭제"
+                        className="h-7 px-2 rounded text-xs border border-red-200 text-red-500 hover:bg-red-50"
+                        aria-label={`${guest.name} 삭제`}
                       >
-                        🗑️
+                        삭제
                       </button>
                     </span>
                   </div>

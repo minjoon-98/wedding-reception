@@ -20,6 +20,12 @@ export default function RecordForm({ weddingId, side, allGuests, onSubmitSuccess
   const [amount, setAmount] = useState('')
   const defaultSide = side === 'groom' ? '신랑측' : side === 'bride' ? '신부측' : '미분류'
   const [guestSide, setGuestSide] = useState(defaultSide)
+
+  // side prop이 auth 로딩 후 바뀌면 guestSide도 업데이트
+  useEffect(() => {
+    const newDefault = side === 'groom' ? '신랑측' : side === 'bride' ? '신부측' : '미분류'
+    setGuestSide(newDefault)
+  }, [side])
   const [showExtra, setShowExtra] = useState(false)
   const [relation, setRelation] = useState('')
   const [memo, setMemo] = useState('')
