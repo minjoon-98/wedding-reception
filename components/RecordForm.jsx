@@ -18,7 +18,8 @@ export default function RecordForm({ weddingId, side, allGuests, onSubmitSuccess
 
   const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
-  const [guestSide, setGuestSide] = useState('미분류')
+  const defaultSide = side === 'groom' ? '신랑측' : side === 'bride' ? '신부측' : '미분류'
+  const [guestSide, setGuestSide] = useState(defaultSide)
   const [showExtra, setShowExtra] = useState(false)
   const [relation, setRelation] = useState('')
   const [memo, setMemo] = useState('')
@@ -63,8 +64,8 @@ export default function RecordForm({ weddingId, side, allGuests, onSubmitSuccess
   )
 
   const handleAmountChange = useCallback((e) => {
-    const value = e.target.value.replace(/\D/g, '')
-    setAmount(value)
+    const raw = e.target.value.replace(/\D/g, '')
+    setAmount(raw)
   }, [])
 
   const handleQuickAmount = useCallback((quickAmount) => {
@@ -106,9 +107,8 @@ export default function RecordForm({ weddingId, side, allGuests, onSubmitSuccess
       setAmount('')
       setRelation('')
       setMemo('')
-      setShowExtra(false)
       setDuplicateWarning(false)
-      setGuestSide('미분류')
+      setGuestSide(defaultSide)
       nameRef.current?.focus()
 
       // Background: save to server
@@ -216,7 +216,7 @@ export default function RecordForm({ weddingId, side, allGuests, onSubmitSuccess
         <input
           type="text"
           inputMode="numeric"
-          value={amount}
+          value={amount ? Number(amount).toLocaleString() : ''}
           onChange={handleAmountChange}
           placeholder="금액 (원)"
           aria-label="축의금 금액"
