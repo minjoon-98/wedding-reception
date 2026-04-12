@@ -84,6 +84,11 @@ export default function RecordForm({ weddingId, side, allGuests, onSubmitSuccess
       const trimmedMemo = memo.trim() || null
       const currentSide = guestSide
 
+      // Warn if amount is 0
+      if (!parsedAmount) {
+        if (!confirm('금액이 0원입니다. 그대로 접수할까요?')) return
+      }
+
       // Build optimistic guest and add to UI immediately
       const tempId = crypto.randomUUID()
       const optimisticGuest = {
@@ -277,6 +282,22 @@ export default function RecordForm({ weddingId, side, allGuests, onSubmitSuccess
 
         {showExtra && (
           <div className="space-y-3">
+            <div className="flex flex-wrap gap-1.5">
+              {['친척', '직장', '학교', '지인', '기타'].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setRelation(relation === preset ? '' : preset)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                    relation === preset
+                      ? 'bg-gold-600 text-white border-gold-600'
+                      : 'bg-white text-gold-500 border-gold-200 hover:border-gold-400'
+                  }`}
+                >
+                  {preset}
+                </button>
+              ))}
+            </div>
             <input
               type="text"
               value={relation}
